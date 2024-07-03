@@ -1,7 +1,6 @@
 from os import path
 from enum import Enum
 import argparse
-from re import sub
 import tomllib
 import logging
 from time import sleep
@@ -11,7 +10,6 @@ from typing import Dict, Any, Optional
 import websockets
 import gpiozero
 import subprocess
-import pickle
 
 ### CONST ###
 CONFIG_FILE_NAME = "futarin.toml"
@@ -47,18 +45,22 @@ class LoggerManager:
 
 class Button:
     def __init__(self, pin) -> None:
-        self.gpiozero_button = gpiozero.Button(pin)
+        self.gpiozero_button: gpiozero.Button = gpiozero.Button(pin)
+    def is_pressed(self) -> bool:
+        return self.gpiozero_button.value == 1
+    def is_hold(self) -> bool:
+        return self.gpiozero_button.value == 0
 
 class RingLED:
     def __init__(self) -> None:
         dir_name = path.dirname(__file__)
         ring_led_script_path = path.join(dir_name, "ring_led_pipe.py")
-        self.popen_ring_led = subprocess.Popen(
+        self.ring_led_pipe = subprocess.Popen(
             ["sudo", "python3", ring_led_script_path],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
     def flash(self):
-        self.popen_ring_led.stdin.write(b'xyz')
+        self.ring_led_pipe.stdin.write(b'xyz')
 
 class Mic:
     pass
@@ -82,10 +84,11 @@ class Interface:
 
 class State:
     def __init__(self) -> None:
-        self.config: Optional[Config] = None
-        self.ws: Optional[WebSocketDaemon] = None
-        self.logger_manager: Optional[LoggerManager] = None
-        self.interface: Optional[Interface] = None
+        self.config = generate_config() 
+
+        self.logger_manager = LoggerManager()
+        self.interface = Interface(self)
+        self.ws = WebSocketDaemon(self, self.config.websocket_url)
 
 class Wait:
     def __init__(self, state) -> None:
@@ -149,11 +152,6 @@ class WebSocketDaemon:
 
 async def init() -> State:
     state = State()
-    state.config = generate_config() 
-
-    state.logger_manager = LoggerManager()
-    state.interface = Interface(state)
-    state.ws = WebSocketDaemon(state, state.config.websocket_url)
     await state.ws.connect()
     return state
 
