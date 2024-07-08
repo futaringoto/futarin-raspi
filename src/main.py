@@ -76,19 +76,29 @@ class Interface:
             self.ring_led = RingLED()
             self.logger.debug(self.ring_led.flash())
             # self.mic = Mic()
-        else:
-            self.virtual_interface = WebVirtualInterface()
-            self.button = self.virtual_interface.button()
-            self.ring_led = self.virtual_interface.ring_led()
-            self.mic = self.virtual_interface.mic()
+        # else:
+        #     self.virtual_interface = WebVirtualInterface()
+        #     self.button = self.virtual_interface.button()
+        #     self.ring_led = self.virtual_interface.ring_led()
+        #     self.mic = self.virtual_interface.mic()
 
-class State:
+class System:
     def __init__(self) -> None:
         self.config = generate_config() 
 
         self.logger_manager = LoggerManager()
         self.interface = Interface(self)
         self.ws = WebSocketDaemon(self, self.config.websocket_url)
+    
+    async def wait_for_press_button(self):
+        return NotImplemented
+
+    async def playSound(self, file: file):
+        return NotImplemented
+
+    
+    
+
 
 class Wait:
     def __init__(self, state) -> None:
@@ -142,13 +152,13 @@ class WebSocketDaemon:
         await self.connection.send(value)
     
     async def wait_for_receive(self):
-        recv = await self.connection.recv()
+        recv = await self.connection.r/Secv()
         return recv
 
 
 ### Functions ###
 
-async def init() -> State:
+async def createState() -> System:
     state = State()
     await state.ws.connect()
     return state
@@ -180,9 +190,10 @@ def get_config_from_file(file_from_args):
 
 
 async def main():
-    state = await init()
+    state = await createState()
     logger = state.logger_manager.get_logger("Main")
-    # logger = state.logger_manager.get_logger("main")
+    
+    
     wait = Wait(state)
     train_message = TrainMessage(state)
     listen_message = ListenMessage(state)
