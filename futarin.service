@@ -1,0 +1,12 @@
+[Unit]
+Description=The communication support tool
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/futarin-rpi/
+ExecStart=/usr/bin/python3 /opt/futarin-rpi/src/run.py
+User=futarin-rpi
+
+[Install]
+WantedBy=default.target
