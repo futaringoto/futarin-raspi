@@ -18,6 +18,13 @@ import gpiozero
 import subprocess
 from pyaudio import PyAudio, get_sample_size, paInt16
 
+from src.config.config import Config
+from src.interface.button import Button
+from src.interface.ring_led import RingLED
+from src.interface.mic import Mic
+from src.websocket.client import WebSocket
+from src.log.logger import LoggerManager
+
 ### CONST ###
 CONFIG_FILE_NAME = "futarin.toml"
 
@@ -26,113 +33,8 @@ class Processes(Enum):
     ListenMessage = 0
     TrainMessage = 1
 
-class Signal(Enum):
-    Finish = 0
 
-class LoggerManager:
-    def __init__(self) -> None:
-        self.loggers = []
-
-        self.formatter = Formatter('%(asctime)s[%(levelname)s] %(name)s - %(message)s')
-
-        self.console_handler = StreamHandler()
-        self.console_handler.setLevel(DEBUG)
-        self.console_handler.setFormatter(self.formatter)
-
-        self.file_handler = FileHandler(filename="futarin-raspi.log")
-        self.file_handler.setLevel(DEBUG)
-        self.file_handler.setFormatter(self.formatter)
-        
-        self.logger = self.get_logger("LoggerManager")
-        self.logger.debug("initialized LoggerManager")
-
-    def get_logger(self, name: str, console: bool = True, file: bool = True) -> Logger:
-        logger = getLogger(name)
-        logger.setLevel(DEBUG)
-        if console:
-            logger.addHandler(self.console_handler)
-        if file:
-            logger.addHandler(self.file_handler)
-        self.loggers.append(logger)
-        return logger
-
-class Button:
-    def __init__(self, pin: int, logger: Optional[Logger] = None) -> None:
-        self.logger = logger or getLogger("dummy")
-        self.gpiozero_button: gpiozero.Button = gpiozero.Button(pin)
-        self.logger.debug(f"Initialized Button(pin:{pin})")
-    def is_pressed(self) -> bool:
-        return self.gpiozero_button.value == 1
-    def is_hold(self) -> bool:
-        return self.gpiozero_button.value == 0
-    async def wait_for_press(self) -> None:
-        self.logger.debug("Start waiting for button pressed")
-        self.gpiozero_button.wait_for_press() # type: ignore
-        self.logger.debug("Button pressed during waiting")
-        return
-    async def wait_for_release(self) -> None:
-        self.logger.debug("Start waiting for button released")
-        self.gpiozero_button.wait_for_release() # type: ignore
-        self.logger.debug("Button released during waiting")
-        return
-
-class RingLED:
-    def __init__(self, logger: Optional[Logger] = None) -> None:
-        self.logger = logger or getLogger("dummy")
-        dir_name = path.dirname(__file__)
-        ring_led_script_path = path.join(dir_name, "ring_led_pipe.py")
-        self.ring_led_popen: subprocess.Popen = subprocess.Popen(
-            ["sudo", "python3", ring_led_script_path],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        self.logger.debug("Initialized Ring LED")
-    def flash(self) -> None:
-        self.ring_led_popen.stdin.write(b'xyz')
-
-class Mic:
-    def __init__(self, logger: Optional[Logger] = None) -> None:
-        self.logger = logger or getLogger("dummy")
-        self.chunk = 1024
-        self.format = paInt16
-        self.channels = 1
-        self.rate = 44100
-        self.resetPyAudio()
-        self.logger.debug("Initialized Mic")
-
-    def resetPyAudio(self) -> None:
-        self.py_audio = PyAudio()
-
-    async def record(self, func: FunctionType) -> BytesIO:
-        self.resetPyAudio() # TODO
-        self.logger.debug("Start recording")
-        buffer = BytesIO()
-        buffer.name = f"mic-voice-{int(time())}.wav"
-        
-        with wave.open(buffer, 'wb') as wf:
-            wf.setnchannels(self.channels)
-            wf.setsampwidth(get_sample_size(self.format))
-            wf.setframerate(self.rate)
-
-            self.logger.debug("Start recording")
-            stream = self.py_audio.open(format=self.format, channels=self.channels, rate=self.rate, input=True)
-            while func():
-                wf.writeframes(stream.read(self.chunk))
-            
-            stream.close()
-            self.py_audio.terminate()
-        
-        buffer.seek(0)
-        self.logger.debug("Finish recording")
-        return buffer
-            
-
-            
-
-
-
-            
-
-
+## Interface ##
 class Interface:
     def __init__(self, button1_pin: int, logger: Optional[Logger] = None) -> None:
         self.logger = logger or getLogger("dummy")
@@ -143,65 +45,6 @@ class Interface:
         self.mic = Mic(logger = self.logger)
         self.logger.debug("Initialized Interface")
         
-class Config:
-    def __init__(self) -> None:
-        self.web_dev: bool = False
-        self.websocket_url: Optional[str] = None
-        self.speech_send_url: Optional[str] = None
-        self.button1_pin: Optional[int] = None
-
-        config_from_args = self.get_config_from_args() #read config from args
-        config_from_file = self.get_config_from_file(file = config_from_args["config_file"]) #read config from file
-        self.load(config_from_file)
-        self.load(config_from_args) # overwrite
-
-    def get_config_from_args(self) -> Dict[str, Any]:
-        parser = ArgumentParser()
-        parser.add_argument("-d", "--web-dev", help="run as web develop mode", action="store_true")
-        parser.add_argument("-f", "--config-file", help="use custom config file path", metavar="CONFIG_FILE_PATH", type=FileType('rb'), default=None)
-        args = parser.parse_args()
-        return vars(args)
-
-    def get_config_from_file(self, file: Optional[BytesIO] = None) -> Dict[str, Any]:
-        if file:
-            return tomllib.load(file)
-        else:
-            script_dir = path.dirname(__file__)
-            config_file_path = path.join(script_dir, CONFIG_FILE_NAME)
-            with open(config_file_path, "rb") as config_file:
-                return tomllib.load(config_file)
-
-    def load(self, dict: Dict[str, Any]) -> None:
-        for key in vars(self).keys():
-            if key in dict:
-                self.setter(key, dict[key])
-
-    def setter(self, key: str, value: Any) -> None:
-        setattr(self, key, value)
-
-    def getter(self, key: str, value: Any) -> None:
-        return getattr(self, key, value)
-
-
-class WebSocket:
-    def __init__(self, ws_url: str, logger :Optional[Logger] = None) -> None:
-        self.logger = logger or getLogger("dummy")
-        self.ws_url = ws_url
-        self.logger.debug("Initialized WebSocket")
-
-    async def connect(self) -> None:
-        self.connection = await connect(self.ws_url, open_timeout=None, ping_interval=1, logger=self.logger)
-        self.logger.debug("WebSocket Connectied")
-
-    async def send(self, value: Any) -> None:
-        await self.connection.send(value)
-    
-    async def getReceive(self) -> Optional[Data]:
-        recv = await self.connection.recv()
-        if recv:
-            return recv
-        else:
-            return None
 
 
 class System:
@@ -240,7 +83,7 @@ class System:
         self.logger.debug("listen_message")
 
 async def main() -> None:
-    config = Config() 
+    config = Config(CONFIG_FILE_NAME, __file__) 
     system = System(config)
     logger = system.logger_manager.get_logger("Main")
 
