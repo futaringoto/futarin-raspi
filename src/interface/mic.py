@@ -6,6 +6,7 @@ import wave
 from io import BytesIO
 from time import time
 
+
 class Mic:
     def __init__(self, logger: Optional[Logger] = None) -> None:
         self.logger = logger or getLogger("dummy")
@@ -25,20 +26,21 @@ class Mic:
         buffer = BytesIO()
         buffer.name = f"mic-voice-{int(time())}.wav"
 
-        with wave.open(buffer, 'wb') as wf:
+        with wave.open(buffer, "wb") as wf:
             wf.setnchannels(self.channels)
             wf.setsampwidth(get_sample_size(self.format))
             wf.setframerate(self.rate)
 
             self.logger.debug("Start recording")
-            stream = self.py_audio.open(format=self.format, channels=self.channels, rate=self.rate, input=True)
+            stream = self.py_audio.open(
+                format=self.format, channels=self.channels, rate=self.rate, input=True
+            )
             while func():
                 wf.writeframes(stream.read(self.chunk))
-            
+
             stream.close()
             self.py_audio.terminate()
-        
+
         buffer.seek(0)
         self.logger.debug("Finish recording")
         return buffer
-

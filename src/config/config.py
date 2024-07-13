@@ -4,8 +4,11 @@ from argparse import ArgumentParser, FileType
 import tomllib
 from typing import Dict, Any, Optional
 
+
 class Config:
-    def __init__(self, config_file_name: str, search_dir_path: str) -> None: # path: search config file from this path and it's parents directory
+    def __init__(
+        self, config_file_name: str, search_dir_path: str
+    ) -> None:  # path: search config file from this path and it's parents directory
         # self.web_dev: bool = False
         self.websocket_url: Optional[str] = None
         self.speech_send_url: Optional[str] = None
@@ -13,15 +16,24 @@ class Config:
         self.path = normpath(search_dir_path)
         self.file_name = config_file_name
 
-        config_from_args = self.get_config_from_args() #read config from args
-        config_from_file = self.get_config_from_file(file = config_from_args["config_file"]) #read config from file
+        config_from_args = self.get_config_from_args()  # read config from args
+        config_from_file = self.get_config_from_file(
+            file=config_from_args["config_file"]
+        )  # read config from file
         self.load(config_from_file)
-        self.load(config_from_args) # overwrite config when self.load is called
+        self.load(config_from_args)  # overwrite config when self.load is called
 
     def get_config_from_args(self) -> Dict[str, Any]:
         parser = ArgumentParser()
         # parser.add_argument("-d", "--web-dev", help="run as web develop mode", action="store_true")
-        parser.add_argument("-f", "--config-file", help="use custom config file path", metavar="CONFIG_FILE_PATH", type=FileType('rb'), default=None)
+        parser.add_argument(
+            "-f",
+            "--config-file",
+            help="use custom config file path",
+            metavar="CONFIG_FILE_PATH",
+            type=FileType("rb"),
+            default=None,
+        )
         args = parser.parse_args()
         return vars(args)
 
@@ -35,7 +47,7 @@ class Config:
                 if exists(config_file_path):
                     with open(config_file_path, "rb") as config_file:
                         return tomllib.load(config_file)
-                search_dir = None if search_dir == '/' else dirname(search_dir)
+                search_dir = None if search_dir == "/" else dirname(search_dir)
             raise FileNotFoundError("config file not found")
 
     def load(self, dict: Dict[str, Any]) -> None:
@@ -48,4 +60,3 @@ class Config:
 
     def getter(self, key: str, value: Any) -> None:
         return getattr(self, key, value)
-

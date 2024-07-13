@@ -1,10 +1,11 @@
 from logging import getLogger, Formatter, StreamHandler, FileHandler, Logger, DEBUG
 
+
 class LoggerManager:
     def __init__(self) -> None:
         self.loggers = []
 
-        self.formatter = Formatter('%(asctime)s[%(levelname)s] %(name)s - %(message)s')
+        self.formatter = Formatter("%(asctime)s[%(levelname)s] %(name)s - %(message)s")
 
         self.console_handler = StreamHandler()
         self.console_handler.setLevel(DEBUG)
@@ -13,7 +14,7 @@ class LoggerManager:
         self.file_handler = FileHandler(filename="futarin-raspi.log")
         self.file_handler.setLevel(DEBUG)
         self.file_handler.setFormatter(self.formatter)
-        
+
         self.logger = self.get_logger("LoggerManager")
         self.logger.debug("initialized LoggerManager")
 
@@ -26,4 +27,3 @@ class LoggerManager:
             logger.addHandler(self.file_handler)
         self.loggers.append(logger)
         return logger
-
