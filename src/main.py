@@ -46,6 +46,7 @@ class System:
 
     async def wait_for_press_button(self) -> Processes:
         await self.interface.button1.wait_for_press()
+        self.logger.debug("Button Pressed")
         return Processes.TrainMessage
 
     async def train_message(self) -> None:
@@ -63,11 +64,12 @@ class System:
                 rate=wf.getframerate(),
                 output=True,
             )
+            self.logger.debug("start playing sound")
             while len(data := wf.readframes(self.interface.mic.chunk)):
-                self.logger.debug("play sound")
                 stream.write(data)
             stream.close()
             p.terminate()
+            self.logger.debug("finish playing sound")
 
     async def listen_message(self) -> None:
         self.logger.debug("listen_message")
