@@ -1,3 +1,4 @@
+from io import BytesIO
 import wave
 from sys import exit
 from enum import Enum
@@ -5,6 +6,7 @@ from logging import getLogger, Logger
 from asyncio import run
 from typing import Optional, BinaryIO
 from pyaudio import PyAudio
+from httpx import stream
 
 from src.config.config import Config
 from src.interface.button import Button
@@ -39,7 +41,8 @@ class System:
         self.logger_manager = LoggerManager()
         # self.ws = WebSocket(self.logger_manager.get_logger("WebSocket"), self.config.websocket_url);
         self.interface = Interface(
-            self.config.button1_pin, logger=self.logger_manager.get_logger("Interface")
+            self.config.button1_pin,
+            logger=self.logger_manager.get_logger("Interface"),  # type: ignore
         )
         self.logger = self.logger_manager.get_logger("System")
         self.logger.debug("Initialized Systrem")
@@ -51,8 +54,9 @@ class System:
 
     async def train_message(self) -> None:
         self.logger.debug("Train called")
-        file = await self.interface.mic.record(self.interface.button1.is_pressed)
-        await self.playSound(file)
+        file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
+        processed_file = await self.call_backend(file)
+        await self.playSound(processed_file)
 
     async def playSound(self, file: BinaryIO) -> None:
         self.logger.debug("play sound")
@@ -73,6 +77,22 @@ class System:
 
     async def listen_message(self) -> None:
         self.logger.debug("listen_message")
+
+    async def call_backend(self, audio_file) -> BytesIO:
+        self.config.backend_address
+        files = {"file": ("record1.wav", audio_file, "multipart/form-data")}
+        self.logger.debug(f"http://{self.config.backend_address}/raspi/")
+        with stream(
+            "POST",
+            f"http://{self.config.backend_address}/raspi/",
+            files=files,
+            timeout=120,
+        ) as response:
+            self.logger.debug(response)
+            return BytesIO(response.read())
+            with open("vox.wav", "") as bf:
+                bf.write(response.read())
+                return bf
 
 
 async def main() -> None:

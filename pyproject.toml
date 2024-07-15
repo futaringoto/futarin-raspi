@@ -13,6 +13,7 @@ websockets = "^12.0"
 wheel = "^0.43.0"
 rpi-gpio = "^0.7.1"
 pyaudio = "^0.2.14"
+httpx = "^0.27.0"
 
 [build-system]
 requires = ["poetry-core"]
