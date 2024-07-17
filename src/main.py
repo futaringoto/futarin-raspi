@@ -1,4 +1,5 @@
 from io import BytesIO
+from os import PathLike
 import wave
 from sys import exit
 from enum import Enum
@@ -15,6 +16,7 @@ from src.log.logger import LoggerManager
 
 ### CONST ###
 CONFIG_FILE_NAME = "futarin.toml"
+WELLCOME_MESSAGE_PATH: PathLike = "assets/audio/wellcome.wav"  # type: ignore
 
 
 ### CLASS ###
@@ -41,7 +43,7 @@ class System:
         self.logger_manager = LoggerManager()
         # self.ws = WebSocket(self.logger_manager.get_logger("WebSocket"), self.config.websocket_url);
         self.interface = Interface(
-            self.config.button1_pin,
+            self.config.button1_pin,  # type: ignore
             logger=self.logger_manager.get_logger("Interface"),  # type: ignore
         )
         self.logger = self.logger_manager.get_logger("System")
@@ -90,9 +92,10 @@ class System:
         ) as response:
             self.logger.debug(response)
             return BytesIO(response.read())
-            with open("vox.wav", "") as bf:
-                bf.write(response.read())
-                return bf
+
+    async def load_buffer_file(self, path: PathLike):
+        with open(path, "rb") as bf:
+            return BytesIO(bf.read())
 
 
 async def main() -> None:
@@ -100,7 +103,12 @@ async def main() -> None:
     system = System(config)
     logger = system.logger_manager.get_logger("Main")
 
+    logger.debug("Play wellcome message")
+    wellcome_audio_file = await system.load_buffer_file(WELLCOME_MESSAGE_PATH)
+    await system.playSound(wellcome_audio_file)
+
     logger.debug("start loop")
+
     while True:
         try:
             flag = await system.wait_for_press_button()
