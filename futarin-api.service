@@ -1,0 +1,14 @@
+[Unit]
+Description=Futarin API on Docker
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=onshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/futarin/futarin-api
+ExecStart=/usr/bin/docker compose up -d
+User=pi
+
+[Install]
+WantedBy=multi-user.target

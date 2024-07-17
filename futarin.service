@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/futarin-rpi/
-ExecStart=/usr/bin/python3 /opt/futarin-rpi/src/run.py
-User=futarin-rpi
+WorkingDirectory=/opt/futarin/futarin-raspi
+ExecStart=/home/futarin/.pyenv/shims/python3 /opt/futarin/futarin-raspi/src/main.py
+User=futarin
 
 [Install]
 WantedBy=default.target
