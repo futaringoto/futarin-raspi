@@ -4,10 +4,11 @@ import wave
 from sys import exit
 from enum import Enum
 from logging import getLogger, Logger
-from asyncio import run
+import asyncio
 from typing import Optional, BinaryIO
 from pyaudio import PyAudio
 from httpx import stream
+import subprocess
 
 from src.config.config import Config
 from src.interface.button import Button
@@ -16,7 +17,10 @@ from src.log.logger import LoggerManager
 
 ### CONST ###
 CONFIG_FILE_NAME = "futarin.toml"
-WELLCOME_MESSAGE_PATH: PathLike = "assets/audio/wellcome.wav"  # type: ignore
+WELLCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/wellcome.wav"  # type: ignore
+# CONNECTING_MESSAGE_PATH: PathLike[str] = "assets/audio/connecting.wav"  # type: ignore
+# CONNECTED_MESSAGE_PATH: PathLike[str] = "assets/audio/connected.wav"  # type: ignore
+# PING_INTERVAL_SEC: int = 4
 
 
 ### CLASS ###
@@ -81,7 +85,6 @@ class System:
         self.logger.debug("listen_message")
 
     async def call_backend(self, audio_file) -> BytesIO:
-        self.config.backend_address
         files = {"file": ("record1.wav", audio_file, "multipart/form-data")}
         self.logger.debug(f"http://{self.config.backend_address}/raspi/")
         with stream(
@@ -97,6 +100,17 @@ class System:
         with open(path, "rb") as bf:
             return BytesIO(bf.read())
 
+    async def ping_backend(self) -> bool:
+        return (
+            True
+            if subprocess.run(
+                ["ping", self.config.backend_address, "-c 1", "-i 0.4"],  # type: ignore[]
+                capture_output=True,
+            ).returncode
+            == 0
+            else False
+        )
+
 
 async def main() -> None:
     config = Config(CONFIG_FILE_NAME, __file__)
@@ -106,6 +120,14 @@ async def main() -> None:
     logger.debug("Play wellcome message")
     wellcome_audio_file = await system.load_buffer_file(WELLCOME_MESSAGE_PATH)
     await system.playSound(wellcome_audio_file)
+
+    # if not await system.ping_backend():
+    #     connecting_audio_file = await system.load_buffer_file(CONNECTING_MESSAGE_PATH)
+    #     await system.playSound(connecting_audio_file)
+    #     while not await system.ping_backend():
+    #         sleep(PING_INTERVAL_SEC)
+    #     connected_audio_file = await system.load_buffer_file(CONNECTED_MESSAGE_PATH)
+    #     await system.playSound(connected_audio_file)
 
     logger.debug("start loop")
 
@@ -121,4 +143,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    run(main())
+    asyncio.run(main())

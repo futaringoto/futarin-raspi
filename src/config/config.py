@@ -1,3 +1,4 @@
+from os import PathLike
 from os.path import exists, normpath, join, dirname
 from io import BytesIO
 from argparse import ArgumentParser, FileType
@@ -13,7 +14,7 @@ class Config:
         self.websocket_url: Optional[str] = None
         self.speech_send_url: Optional[str] = None
         self.button1_pin: Optional[int] = None
-        self.backend_address: Optional[str] = None
+        self.backend_address: Optional[PathLike[str]] = None
         self.path = normpath(search_dir_path)
         self.file_name = config_file_name
 
