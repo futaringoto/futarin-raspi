@@ -7,7 +7,7 @@ from logging import getLogger, Logger
 import asyncio
 from typing import Optional, BinaryIO
 from pyaudio import PyAudio
-from httpx import stream
+from httpx import stream, codes
 import subprocess
 
 from src.config.config import Config
@@ -62,7 +62,10 @@ class System:
         self.logger.debug("Train called")
         file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
         processed_file = await self.call_backend(file)
-        await self.playSound(processed_file)
+        if processed_file:
+            await self.playSound(processed_file)
+        else:
+            pass
 
     async def playSound(self, file: BinaryIO) -> None:
         self.logger.debug("play sound")
@@ -84,7 +87,7 @@ class System:
     async def listen_message(self) -> None:
         self.logger.debug("listen_message")
 
-    async def call_backend(self, audio_file) -> BytesIO:
+    async def call_backend(self, audio_file) -> Optional[BytesIO]:
         files = {"file": ("record1.wav", audio_file, "multipart/form-data")}
         self.logger.debug(f"http://{self.config.backend_address}/raspi/")
         with stream(
@@ -94,7 +97,10 @@ class System:
             timeout=120,
         ) as response:
             self.logger.debug(response)
-            return BytesIO(response.read())
+            if response.status_code == codes.OK:
+                return BytesIO(response.read())
+            else:
+                return None
 
     async def load_buffer_file(self, path: PathLike):
         with open(path, "rb") as bf:
