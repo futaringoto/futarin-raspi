@@ -7,6 +7,7 @@ Type=simple
 WorkingDirectory=/opt/futarin/futarin-raspi
 ExecStart=/home/futarin/.pyenv/shims/python3 /opt/futarin/futarin-raspi/src/main.py
 User=futarin
+Restart=always
 
 [Install]
 WantedBy=default.target

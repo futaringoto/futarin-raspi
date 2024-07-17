@@ -8,7 +8,8 @@ Type=onshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/futarin/futarin-api
 ExecStart=/usr/bin/docker compose up -d
-User=pi
+User=futarin
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
