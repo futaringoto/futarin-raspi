@@ -10,7 +10,7 @@ from time import time
 class Mic:
     def __init__(self, logger: Optional[Logger] = None) -> None:
         self.logger = logger or getLogger("dummy")
-        self.chunk = 1024
+        self.chunk = 1024 * 3
         self.format = paInt16
         self.channels = 1
         self.rate = 44100
@@ -36,7 +36,7 @@ class Mic:
                 format=self.format, channels=self.channels, rate=self.rate, input=True
             )
             while func():
-                wf.writeframes(stream.read(self.chunk))
+                wf.writeframes(stream.read(self.chunk, exception_on_overflow=False))
 
             stream.close()
             self.py_audio.terminate()
