@@ -19,6 +19,7 @@ from src.log.logger import LoggerManager
 CONFIG_FILE_NAME = "futarin.toml"
 WELLCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/wellcome.wav"  # type: ignore
 PLEASE_WAIT_MESSAGE_PATH: PathLike[str] = "assets/audio/please_wait.wav"  # type: ignore
+FAIL_MESSAGE_PATH: PathLike[str] = "assets/audio/fail.wav"  # type: ignore
 # CONNECTING_MESSAGE_PATH: PathLike[str] = "assets/audio/connecting.wav"  # type: ignore
 # CONNECTED_MESSAGE_PATH: PathLike[str] = "assets/audio/connected.wav"  # type: ignore
 # PING_INTERVAL_SEC: int = 4
@@ -69,7 +70,8 @@ class System:
         if processed_file:
             await self.playSound(processed_file)
         else:
-            pass
+            fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
+            await self.playSound(fail_msg)
 
     async def playSound(self, file: BinaryIO) -> None:
         self.logger.debug("play sound")
