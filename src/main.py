@@ -88,7 +88,7 @@ class System:
             audio = audio.set_frame_rate(RATE)
             audio.export(processed_file, format="wav")
 
-        with wave.open(processed_file):
+        with wave.open(processed_file, "rb"):
             p = PyAudio()
             stream = p.open(
                 format=p.get_format_from_width(wf.getsampwidth()),
