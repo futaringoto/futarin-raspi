@@ -10,11 +10,11 @@ from time import time
 class Mic:
     def __init__(self, logger: Optional[Logger] = None) -> None:
         self.logger = logger or getLogger("dummy")
-        self.chunk = 1024 * 3
+        self.chunk = 1024 * 8
         self.format = paInt16
-        self.channels = 1
+        self.channels = 2
         self.rate = 44100
-        self.resetPyAudio()
+        self.input_device_index = 1
         self.logger.debug("Initialized Mic")
 
     def resetPyAudio(self) -> None:
@@ -33,7 +33,11 @@ class Mic:
 
             self.logger.debug("Start recording")
             stream = self.py_audio.open(
-                format=self.format, channels=self.channels, rate=self.rate, input=True
+                format=self.format,
+                channels=self.channels,
+                rate=self.rate,
+                input=True,
+                input_device_index=self.input_device_index,
             )
             while func():
                 wf.writeframes(stream.read(self.chunk, exception_on_overflow=False))

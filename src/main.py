@@ -65,23 +65,24 @@ class System:
         file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
         backend_task = asyncio.create_task(self.call_backend(file))
         audio_file = await self.load_buffer_file(PLEASE_WAIT_MESSAGE_PATH)
-        await self.playSound(audio_file)
+        await self.play_sound(audio_file)
         processed_file = await backend_task
         if processed_file:
-            await self.playSound(processed_file)
+            await self.play_sound(processed_file)
         else:
             fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
-            await self.playSound(fail_msg)
+            await self.play_sound(fail_msg)
 
-    async def playSound(self, file: BinaryIO) -> None:
+    async def play_sound(self, file: BinaryIO) -> None:
         self.logger.debug("play sound")
         with wave.open(file, "rb") as wf:
             p = PyAudio()
             stream = p.open(
                 format=p.get_format_from_width(wf.getsampwidth()),
-                channels=wf.getnchannels(),
+                channels=2,
                 rate=wf.getframerate(),
                 output=True,
+                output_device_index=1,
             )
             self.logger.debug("start playing sound")
             while len(data := wf.readframes(self.interface.mic.chunk)):
@@ -131,15 +132,15 @@ async def main() -> None:
 
     logger.debug("Play wellcome message")
     wellcome_audio_file = await system.load_buffer_file(WELLCOME_MESSAGE_PATH)
-    await system.playSound(wellcome_audio_file)
+    await system.play_sound(wellcome_audio_file)
 
     # if not await system.ping_backend():
     #     connecting_audio_file = await system.load_buffer_file(CONNECTING_MESSAGE_PATH)
-    #     await system.playSound(connecting_audio_file)
+    #     await system.play_sound(connecting_audio_file)
     #     while not await system.ping_backend():
     #         sleep(PING_INTERVAL_SEC)
     #     connected_audio_file = await system.load_buffer_file(CONNECTED_MESSAGE_PATH)
-    #     await system.playSound(connected_audio_file)
+    #     await system.play_sound(connected_audio_file)
 
     logger.debug("start loop")
 
