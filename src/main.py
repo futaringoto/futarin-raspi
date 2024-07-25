@@ -77,7 +77,7 @@ class System:
     async def play_sound(self, file: BinaryIO) -> None:
         self.logger.debug("play sound")
         RATE = 44100
-        audio = None
+        processed_file = BinaryIO()
         with wave.open(file, "rb") as wf:
             audio = AudioSegment.from_raw(
                 file,
@@ -86,8 +86,9 @@ class System:
                 channels=wf.getnchannels(),
             )
             audio = audio.set_frame_rate(RATE)
+            audio.export(processed_file, format="wav")
 
-        with wave.open(BytesIO(audio.raw_data)):
+        with wave.open(processed_file):
             p = PyAudio()
             stream = p.open(
                 format=p.get_format_from_width(wf.getsampwidth()),
