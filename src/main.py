@@ -21,6 +21,7 @@ CONFIG_FILE_NAME = "futarin.toml"
 WELLCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/wellcome.wav"  # type: ignore
 PLEASE_WAIT_MESSAGE_PATH: PathLike[str] = "assets/audio/please_wait.wav"  # type: ignore
 FAIL_MESSAGE_PATH: PathLike[str] = "assets/audio/fail.wav"  # type: ignore
+WHAT_HAPPEN_PATH: PathLike[str] = "assets/audio/whathappen.wav"  # type: ignore
 # CONNECTING_MESSAGE_PATH: PathLike[str] = "assets/audio/connecting.wav"  # type: ignore
 # CONNECTED_MESSAGE_PATH: PathLike[str] = "assets/audio/connected.wav"  # type: ignore
 # PING_INTERVAL_SEC: int = 4
@@ -63,6 +64,8 @@ class System:
 
     async def train_message(self) -> None:
         self.logger.debug("Train called")
+        whathappen = await self.load_buffer_file(WHAT_HAPPEN_PATH)
+        await self.play_sound(whathappen)
         file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
         backend_task = asyncio.create_task(self.call_backend(file))
         audio_file = await self.load_buffer_file(PLEASE_WAIT_MESSAGE_PATH)
