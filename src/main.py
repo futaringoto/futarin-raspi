@@ -9,6 +9,7 @@ from typing import Optional, BinaryIO
 from pyaudio import PyAudio
 from httpx import stream, codes
 import subprocess
+from pydub import AudioSegment
 
 from src.config.config import Config
 from src.interface.button import Button
@@ -75,7 +76,18 @@ class System:
 
     async def play_sound(self, file: BinaryIO) -> None:
         self.logger.debug("play sound")
+        RATE = 44100
+        audio = None
         with wave.open(file, "rb") as wf:
+            audio = AudioSegment.from_raw(
+                file,
+                sample_width=wf.getsampwidth(),
+                frame_rate=wf.getframerate(),
+                channels=wf.getnchannels(),
+            )
+            audio = audio.set_frame_rate(RATE)
+
+        with wave.open(BytesIO(audio.raw_data)):
             p = PyAudio()
             stream = p.open(
                 format=p.get_format_from_width(wf.getsampwidth()),
@@ -84,6 +96,7 @@ class System:
                 output=True,
                 output_device_index=1,
             )
+
             self.logger.debug("start playing sound")
             while len(data := wf.readframes(self.interface.mic.chunk)):
                 stream.write(data)

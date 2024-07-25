@@ -14,6 +14,7 @@ wheel = "^0.43.0"
 pyaudio = "^0.2.14"
 httpx = "^0.27.0"
 rpi-lgpio = "^0.6"
+pydub = "^0.25.1"
 
 [build-system]
 requires = ["poetry-core"]
