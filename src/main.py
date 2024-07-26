@@ -81,6 +81,7 @@ class System:
         self.logger.debug("play sound")
         RATE = 44100
         processed_file = BytesIO()
+        duration = 0
         with wave.open(file, "rb") as wf:
             audio = AudioSegment.from_raw(
                 file,
@@ -90,6 +91,7 @@ class System:
             )
             audio = audio.set_frame_rate(RATE)
             processed_file = audio.export(processed_file, format="wav")
+            duration = audio.duration_seconds
 
         with wave.open(processed_file, "rb") as wf:
             p = PyAudio()
@@ -102,7 +104,7 @@ class System:
             )
 
             self.logger.debug("start playing sound")
-            while len(data := wf.readframes(self.interface.mic.chunk)):
+            while len(data := wf.readframes(1024 * 4)):
                 stream.write(data)
             stream.close()
             p.terminate()
