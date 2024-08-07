@@ -2,7 +2,6 @@
 name = "futarin-raspi"
 version = "0.1.0"
 description = ""
-authors = ["cykps <cykps.ps@gmail.com>"]
 readme = "README.md"
 packages = [{include = "src"}]
 
