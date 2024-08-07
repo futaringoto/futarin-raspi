@@ -67,6 +67,10 @@ class System:
         whathappen = await self.load_buffer_file(WHAT_HAPPEN_PATH)
         await self.play_sound(whathappen)
         file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
+        if await self.check_recorded_file(file):
+            fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
+            await self.play_sound(fail_msg)
+            return
         backend_task = asyncio.create_task(self.call_backend(file))
         audio_file = await self.load_buffer_file(PLEASE_WAIT_MESSAGE_PATH)
         await self.play_sound(audio_file)
@@ -112,6 +116,12 @@ class System:
 
     async def listen_message(self) -> None:
         self.logger.debug("listen_message")
+
+    async def check_recorded_file(self, audio_file) -> bool:
+        audio = AudioSegment.from_file(audio_file, "wav")
+        if audio.duration_seconds < 1:
+            return False
+        return True
 
     async def call_backend(self, audio_file) -> Optional[BytesIO]:
         files = {"file": ("record1.wav", audio_file, "multipart/form-data")}
