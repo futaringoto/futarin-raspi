@@ -1,6 +1,7 @@
 [tool.poetry]
 name = "futarin-raspi"
 version = "0.1.0"
+authors = ["cykps"]
 description = ""
 readme = "README.md"
 packages = [{include = "src"}]
