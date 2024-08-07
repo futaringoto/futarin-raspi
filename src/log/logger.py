@@ -1,29 +1,33 @@
 from logging import getLogger, Formatter, StreamHandler, FileHandler, Logger, DEBUG
 
+loggers = []
 
-class LoggerManager:
-    def __init__(self) -> None:
-        self.loggers = []
 
-        self.formatter = Formatter("%(asctime)s[%(levelname)s] %(name)s - %(message)s")
+def get_logger(name: str, console: bool = True, file: bool = True) -> Logger:
+    logger = getLogger(name)
+    logger.setLevel(DEBUG)
+    if console:
+        logger.addHandler(console_handler)
+    if file:
+        logger.addHandler(file_handler)
+    loggers.append(logger)
+    return logger
 
-        self.console_handler = StreamHandler()
-        self.console_handler.setLevel(DEBUG)
-        self.console_handler.setFormatter(self.formatter)
 
-        self.file_handler = FileHandler(filename="futarin-raspi.log")
-        self.file_handler.setLevel(DEBUG)
-        self.file_handler.setFormatter(self.formatter)
+formatter = Formatter("%(asctime)s[%(levelname)s] %(name)s - %(message)s")
 
-        self.logger = self.get_logger("LoggerManager")
-        self.logger.debug("initialized LoggerManager")
+console_handler = StreamHandler()
+console_handler.setLevel(DEBUG)
+console_handler.setFormatter(formatter)
 
-    def get_logger(self, name: str, console: bool = True, file: bool = True) -> Logger:
-        logger = getLogger(name)
-        logger.setLevel(DEBUG)
-        if console:
-            logger.addHandler(self.console_handler)
-        if file:
-            logger.addHandler(self.file_handler)
-        self.loggers.append(logger)
-        return logger
+file_handler = FileHandler(filename="futarin-raspi.log")
+file_handler.setLevel(DEBUG)
+file_handler.setFormatter(formatter)
+
+logger = get_logger("LoggerManager")
+logger.debug("initialized LoggerManager")
+
+
+if __name__ == "__main__":
+    logger = get_logger("Test")
+    logger.debug("This is test message.")
