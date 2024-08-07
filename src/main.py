@@ -67,7 +67,7 @@ class System:
         whathappen = await self.load_buffer_file(WHAT_HAPPEN_PATH)
         await self.play_sound(whathappen)
         file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
-        if await self.check_recorded_file(file):
+        if not await self.check_recorded_file(file):
             fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
             await self.play_sound(fail_msg)
             return
