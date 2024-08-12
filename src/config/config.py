@@ -4,7 +4,8 @@ from argparse import ArgumentParser, FileType
 import tomllib
 from typing import Dict, Any, Optional, TypedDict
 
-FILE_NAME = "futarin.toml"
+_FILE_NAME = "futarin.toml"
+
 Config = TypedDict(
     "Config",
     {
@@ -16,7 +17,7 @@ Config = TypedDict(
 )
 
 
-def get_config_from_args() -> Dict[str, Any]:
+def _get_config_from_args() -> Dict[str, Any]:
     parser = ArgumentParser()
     parser.add_argument(
         "-f",
@@ -30,14 +31,14 @@ def get_config_from_args() -> Dict[str, Any]:
     return vars(args)
 
 
-def get_config_from_file() -> Dict[str, Any]:
-    file_from_args = config_from_args["config_file"]
+def _get_config_from_file() -> Dict[str, Any]:
+    file_from_args = _config_from_args["config_file"]
     if file_from_args:
         return tomllib.load(file_from_args)
     else:
         search_dir = getcwd()
         while search_dir:
-            config_file_path = join(search_dir, FILE_NAME)
+            config_file_path = join(search_dir, _FILE_NAME)
             if exists(config_file_path):
                 with open(config_file_path, "rb") as config_file:
                     return tomllib.load(config_file)
@@ -45,9 +46,9 @@ def get_config_from_file() -> Dict[str, Any]:
         raise FileNotFoundError("config file not found")
 
 
-def generate_config() -> Config:
+def _generate_config() -> Config:
     config = {}
-    for conf in [config_from_file, config_from_args]:
+    for conf in [_config_from_file, _config_from_args]:
         for key in Config.__annotations__.keys():
             if key in conf:
                 config[key] = conf[key]
@@ -58,12 +59,12 @@ def get(key: str) -> Any:
     return config[key]
 
 
-config_from_args = get_config_from_args()  # read config from args
-config_from_file = get_config_from_file()  # read config from file
+_config_from_args = _get_config_from_args()  # read config from args
+_config_from_file = _get_config_from_file()  # read config from file
 
-config: Config = generate_config()
+config: Config = _generate_config()
 
 if __name__ == "__main__":
-    print(f"config_from_args: {config_from_args}")
-    print(f"config_from_file: {config_from_file}")
+    print(f"config_from_args: {_config_from_args}")
+    print(f"config_from_file: {_config_from_file}")
     print(f"config: {config}")
