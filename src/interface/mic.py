@@ -1,5 +1,4 @@
-from logging import getLogger, Logger
-from typing import Optional
+from logging import getLogger
 from pyaudio import PyAudio, get_sample_size, paInt16
 from types import FunctionType
 import wave
@@ -7,44 +6,45 @@ from io import BytesIO
 from time import time
 
 
-class Mic:
-    def __init__(self, logger: Optional[Logger] = None) -> None:
-        self.logger = logger or getLogger("dummy")
-        self.chunk = 1024 * 8
-        self.format = paInt16
-        self.channels = 2
-        self.rate = 44100
-        self.input_device_index = 1
-        self.logger.debug("Initialized Mic")
+async def record(func: FunctionType) -> BytesIO:
+    py_audio = PyAudio()
+    buffer = BytesIO()
+    buffer.name = f"mic-{int(time())}.wav"
 
-    def resetPyAudio(self) -> None:
-        self.py_audio = PyAudio()
+    with wave.open(buffer, "wb") as wf:
+        wf.setnchannels(channels)
+        wf.setsampwidth(get_sample_size(format))
+        wf.setframerate(rate)
 
-    async def record(self, func: FunctionType) -> BytesIO:
-        self.resetPyAudio()
-        self.logger.debug("Start recording")
-        buffer = BytesIO()
-        buffer.name = f"mic-voice-{int(time())}.wav"
+        logger.debug("Start recording")
+        stream = py_audio.open(
+            format=format,
+            channels=channels,
+            rate=rate,
+            input=True,
+            input_device_index=input_device_index,
+        )
+        while func():
+            wf.writeframes(stream.read(chunk, exception_on_overflow=False))
 
-        with wave.open(buffer, "wb") as wf:
-            wf.setnchannels(self.channels)
-            wf.setsampwidth(get_sample_size(self.format))
-            wf.setframerate(self.rate)
+        stream.close()
+        py_audio.terminate()
 
-            self.logger.debug("Start recording")
-            stream = self.py_audio.open(
-                format=self.format,
-                channels=self.channels,
-                rate=self.rate,
-                input=True,
-                input_device_index=self.input_device_index,
-            )
-            while func():
-                wf.writeframes(stream.read(self.chunk, exception_on_overflow=False))
+    buffer.seek(0)
+    logger.debug("Finish recording")
+    return buffer
 
-            stream.close()
-            self.py_audio.terminate()
 
-        buffer.seek(0)
-        self.logger.debug("Finish recording")
-        return buffer
+logger = getLogger("Mic")
+
+chunk = 1024 * 8
+format = paInt16
+channels = 2
+rate = 44100
+input_device_index = 1
+
+logger.debug("Initialized")
+
+if __name__ == "__main__":
+    logger.debug("Recording test")
+    # TODO
