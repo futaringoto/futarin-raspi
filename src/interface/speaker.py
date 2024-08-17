@@ -6,6 +6,9 @@ from typing import BinaryIO
 from pydub import AudioSegment
 
 
+RATE = 44100
+
+
 async def play_sound(file: BinaryIO) -> None:
     logger.debug("Convert frame rate.")
     with wave.open(file, "rb") as wf:
@@ -38,5 +41,4 @@ async def play_sound(file: BinaryIO) -> None:
 
 
 logger = get_logger("Speaker")
-RATE = 44100
 logger.debug("Initialized.")
