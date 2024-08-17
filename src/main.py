@@ -40,17 +40,17 @@ class Interface:
         self.button_left = Button(
             config["button_left_pin"], logger=get_logger("ButtonLeft")
         )
-        self.logger.debug("Initialized Interface")
+        self.logger.info("Initialized.")
 
 
 class System:
     def __init__(self) -> None:
         self.interface = Interface()
         self.logger = get_logger("System")
-        self.logger.debug("Initialized Systrem")
+        self.logger.info("Initialized.")
 
     async def train_message(self) -> None:
-        self.logger.debug("Train called")
+        self.logger.info("Train called.")
         whathappen = await self.load_buffer_file(WHAT_HAPPEN_PATH)
         await play_sound(whathappen)
         file = await record(self.interface.button_left.is_pressed)
@@ -108,11 +108,11 @@ async def main() -> None:
     system = System()
     logger = get_logger("Main")
 
-    logger.debug("Play wellcome message")
+    logger.info("Play wellcome message.")
     wellcome_audio_file = await system.load_buffer_file(WELLCOME_MESSAGE_PATH)
     await play_sound(wellcome_audio_file)
 
-    logger.debug("start loop")
+    logger.info("Start loop.")
 
     while True:
         try:

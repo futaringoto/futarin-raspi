@@ -10,7 +10,7 @@ RATE = 44100
 
 
 async def play_sound(file: BinaryIO) -> None:
-    logger.debug("Convert frame rate.")
+    logger.info("Convert framerate.")
     with wave.open(file, "rb") as wf:
         audio = AudioSegment.from_raw(
             file,
@@ -32,13 +32,13 @@ async def play_sound(file: BinaryIO) -> None:
             output_device_index=1,
         )
 
-        logger.debug("Start playing sound.")
+        logger.info("Start playing sound.")
         while len(data := wf.readframes(1024 * 4)):
             stream.write(data)
         stream.close()
         p.terminate()
-        logger.debug("Finish playing sound.")
+        logger.info("Finish playing sound.")
 
 
 logger = get_logger("Speaker")
-logger.debug("Initialized.")
+logger.info("Initialized.")

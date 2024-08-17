@@ -16,7 +16,7 @@ async def record(func: Callable[[], bool]) -> BytesIO:
         wf.setsampwidth(get_sample_size(FORMAT))
         wf.setframerate(RATE)
 
-        logger.debug("Start recording")
+        logger.info("Start recording.")
         stream = py_audio.open(
             format=FORMAT,
             channels=CHANNELS,
@@ -31,7 +31,7 @@ async def record(func: Callable[[], bool]) -> BytesIO:
         py_audio.terminate()
 
     buffer.seek(0)
-    logger.debug("Finish recording")
+    logger.info("Finish recording.")
     return buffer
 
 

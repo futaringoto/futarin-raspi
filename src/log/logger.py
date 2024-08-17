@@ -35,9 +35,10 @@ file_handler.setLevel(DEBUG)
 file_handler.setFormatter(file_formatter)
 
 logger = get_logger("LoggerManager")
-logger.debug("initialized LoggerManager")
+logger.info("Initialized.")
 
 
 if __name__ == "__main__":
     logger = get_logger("Test")
-    logger.debug("This is test message.")
+    logger.info("This is test message on info.")
+    logger.debug("This is test message on debug.")
