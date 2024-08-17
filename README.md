@@ -9,14 +9,19 @@
 
 ## Getting Started
 
-1. Clone this repository
+1. Install dependencies
+```shell
+sudo apt install -y python3-dev portaudio19-dev
+```
+
+2. Clone this repository
 
 ```shell
 git clone "git@github.com:futaringoto/futarin-raspi.git" 
 cd futarin-raspi
 ```
 
-2. Install Packages from `.pyproject.toml`
+3. Install Packages from `.pyproject.toml`
 
 ```shell
 # use normal Python envierment
