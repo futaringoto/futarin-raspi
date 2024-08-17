@@ -12,20 +12,20 @@ async def record(func: Callable[[], bool]) -> BytesIO:
     buffer.name = f"mic-{int(time())}.wav"
 
     with wave.open(buffer, "wb") as wf:
-        wf.setnchannels(channels)
-        wf.setsampwidth(get_sample_size(format))
-        wf.setframerate(rate)
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(get_sample_size(FORMAT))
+        wf.setframerate(RATE)
 
         logger.debug("Start recording")
         stream = py_audio.open(
-            format=format,
-            channels=channels,
-            rate=rate,
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
             input=True,
-            input_device_index=input_device_index,
+            input_device_index=INPUT_DEVICE_INDEX,
         )
         while func():
-            wf.writeframes(stream.read(chunk, exception_on_overflow=False))
+            wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
 
         stream.close()
         py_audio.terminate()
@@ -37,14 +37,14 @@ async def record(func: Callable[[], bool]) -> BytesIO:
 
 logger = getLogger("Mic")
 
-chunk = 1024 * 8
-format = paInt16
-channels = 2
-rate = 44100
-input_device_index = 1
+CHUNK = 1024 * 8
+FORMAT = paInt16
+CHANNELS = 2
+RATE = 44100
+INPUT_DEVICE_INDEX = 1
 
 logger.debug("Initialized")
 
-if __name__ == "__main__":
-    logger.debug("Recording test")
-    # TODO
+# if __name__ == "__main__":
+#     logger.debug("Recording test")
+#     # TODO
