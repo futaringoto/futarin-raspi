@@ -22,7 +22,8 @@ class FileFormatter(Formatter):
 
 
 console_formatter = Formatter(
-    "%(asctime)s.%(msecs)d [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"
+    "%(asctime)s.%(msecs)03d %(levelname)s [%(name)s]: %(message)s",
+    datefmt="%H:%M:%S",
 )
 file_formatter = FileFormatter()
 
