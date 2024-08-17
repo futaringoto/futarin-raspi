@@ -1,12 +1,10 @@
 from io import BytesIO
 from os import PathLike
-import wave
 from sys import exit
 from enum import Enum
 from logging import getLogger, Logger
 import asyncio
-from typing import Optional, BinaryIO
-from pyaudio import PyAudio
+from typing import Optional
 from httpx import stream, codes
 import subprocess
 from pydub import AudioSegment
@@ -14,6 +12,7 @@ from pydub import AudioSegment
 from src.config.config import Config
 from src.interface.button import Button
 from src.interface.mic import Mic
+from src.interface.speaker import play_sound
 from src.log.logger import LoggerManager
 
 ### CONST ###
@@ -65,54 +64,21 @@ class System:
     async def train_message(self) -> None:
         self.logger.debug("Train called")
         whathappen = await self.load_buffer_file(WHAT_HAPPEN_PATH)
-        await self.play_sound(whathappen)
+        await play_sound(whathappen)
         file = await self.interface.mic.record(self.interface.button1.is_pressed)  # type: ignore
         if not await self.check_recorded_file(file):
             fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
-            await self.play_sound(fail_msg)
+            await play_sound(fail_msg)
             return
         backend_task = asyncio.create_task(self.call_backend(file))
         audio_file = await self.load_buffer_file(PLEASE_WAIT_MESSAGE_PATH)
-        await self.play_sound(audio_file)
+        await play_sound(audio_file)
         processed_file = await backend_task
         if processed_file:
-            await self.play_sound(processed_file)
+            await play_sound(processed_file)
         else:
             fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
-            await self.play_sound(fail_msg)
-
-    async def play_sound(self, file: BinaryIO) -> None:
-        self.logger.debug("play sound")
-        RATE = 44100
-        processed_file = BytesIO()
-        duration = 0
-        with wave.open(file, "rb") as wf:
-            audio = AudioSegment.from_raw(
-                file,
-                sample_width=wf.getsampwidth(),
-                frame_rate=wf.getframerate(),
-                channels=wf.getnchannels(),
-            )
-            audio = audio.set_frame_rate(RATE)
-            processed_file = audio.export(processed_file, format="wav")
-            duration = audio.duration_seconds
-
-        with wave.open(processed_file, "rb") as wf:
-            p = PyAudio()
-            stream = p.open(
-                format=p.get_format_from_width(wf.getsampwidth()),
-                channels=wf.getnchannels(),
-                rate=wf.getframerate(),
-                output=True,
-                output_device_index=1,
-            )
-
-            self.logger.debug("start playing sound")
-            while len(data := wf.readframes(1024 * 4)):
-                stream.write(data)
-            stream.close()
-            p.terminate()
-            self.logger.debug("finish playing sound")
+            await play_sound(fail_msg)
 
     async def listen_message(self) -> None:
         self.logger.debug("listen_message")
