@@ -4,7 +4,7 @@ from argparse import ArgumentParser, FileType
 import tomllib
 from typing import Dict, Any, Optional, TypedDict
 
-_FILE_NAME = "futarin.toml"
+FILE_NAME = "futarin.toml"
 
 Config = TypedDict(
     "Config",
@@ -38,7 +38,7 @@ def _get_config_from_file() -> Dict[str, Any]:
     else:
         search_dir = getcwd()
         while search_dir:
-            config_file_path = join(search_dir, _FILE_NAME)
+            config_file_path = join(search_dir, FILE_NAME)
             if exists(config_file_path):
                 with open(config_file_path, "rb") as config_file:
                     return tomllib.load(config_file)
