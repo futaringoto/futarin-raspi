@@ -6,7 +6,7 @@ from typing import BinaryIO
 from pydub import AudioSegment
 
 
-async def play_sound(self, file: BinaryIO) -> None:
+async def play_sound(file: BinaryIO) -> None:
     logger.debug("Convert frame rate.")
     with wave.open(file, "rb") as wf:
         audio = AudioSegment.from_raw(
@@ -29,12 +29,12 @@ async def play_sound(self, file: BinaryIO) -> None:
             output_device_index=1,
         )
 
-        self.logger.debug("Start playing sound.")
+        logger.debug("Start playing sound.")
         while len(data := wf.readframes(1024 * 4)):
             stream.write(data)
         stream.close()
         p.terminate()
-        self.logger.debug("Finish playing sound.")
+        logger.debug("Finish playing sound.")
 
 
 logger = get_logger("Speaker")
