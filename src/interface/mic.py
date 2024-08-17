@@ -1,12 +1,12 @@
 from logging import getLogger
 from pyaudio import PyAudio, get_sample_size, paInt16
-from types import FunctionType
+from typing import Callable
 import wave
 from io import BytesIO
 from time import time
 
 
-async def record(func: FunctionType) -> BytesIO:
+async def record(func: Callable[[], bool]) -> BytesIO:
     py_audio = PyAudio()
     buffer = BytesIO()
     buffer.name = f"mic-{int(time())}.wav"
