@@ -17,7 +17,7 @@ from src.log.logger import get_logger
 
 ### CONST ###
 CONFIG_FILE_NAME = "futarin.toml"
-WELLCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/wellcome.wav"  # type: ignore
+WELCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/welcome.wav"  # type: ignore
 PLEASE_WAIT_MESSAGE_PATH: PathLike[str] = "assets/audio/please_wait.wav"  # type: ignore
 FAIL_MESSAGE_PATH: PathLike[str] = "assets/audio/fail.wav"  # type: ignore
 WHAT_HAPPEN_PATH: PathLike[str] = "assets/audio/whathappen.wav"  # type: ignore
@@ -108,9 +108,9 @@ async def main() -> None:
     system = System()
     logger = get_logger("Main")
 
-    logger.info("Play wellcome message.")
-    wellcome_audio_file = await system.load_buffer_file(WELLCOME_MESSAGE_PATH)
-    await play_sound(wellcome_audio_file)
+    logger.info("Play welcome message.")
+    welcome_audio_file = await system.load_buffer_file(WELCOME_MESSAGE_PATH)
+    await play_sound(welcome_audio_file)
 
     logger.info("Start loop.")
 
