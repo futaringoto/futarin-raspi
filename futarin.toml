@@ -1,2 +1,3 @@
-api_endpoint_url="http://localhost:8000/api/speech"
+api_origin="" #example: http://example.com
+api_version="1"
 button_left_pin=18
