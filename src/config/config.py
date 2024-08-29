@@ -9,25 +9,35 @@ FILE_NAME = "futarin.toml"
 Config = TypedDict(
     "Config",
     {
-        "api_endpoint_url": Optional[str],
+        "api_origin": Optional[str],
         "button_right_pin": Optional[int],
         "button_left_pin": Optional[int],
-        "skip_welcome_msg": Optional[bool],
+        "skip_introduction": Optional[bool],
+        "api_version": Optional[int],
     },
 )
 
 
 def _get_config_from_args() -> Dict[str, Any]:
     parser = ArgumentParser()
+
     parser.add_argument(
         "-f",
         "--config-file",
-        help="use custom config file path",
+        help="Set custom config file path.",
         metavar="CONFIG_FILE_PATH",
         type=FileType("rb"),
         default=None,
     )
+
+    parser.add_argument(
+        "--skip-introduction",
+        help="Skip playing introduction message at startup.",
+        action="store_true",
+    )
+
     args = parser.parse_args()
+
     return vars(args)
 
 
