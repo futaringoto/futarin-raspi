@@ -75,7 +75,7 @@ class System:
         return True
 
     async def call_backend(self, audio_file) -> Optional[BytesIO]:
-        url = f"{config['api_origin']}/v{config['api_version']}/raspi"
+        url = f"{config['api_origin']}/v{config['api_version']}/raspi/"
         files = {"file": ("record.wav", audio_file, "multipart/form-data")}
         with stream(
             "POST",
