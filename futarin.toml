@@ -1,3 +1,4 @@
 api_origin="" #example: http://example.com
 api_version="1"
 button_left_pin=18
+audio_device_name="BY Y02"

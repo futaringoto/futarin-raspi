@@ -2,11 +2,13 @@ from src.log.logger import get_logger
 from pyaudio import PyAudio
 import wave
 from io import BytesIO
-from typing import BinaryIO
+from typing import BinaryIO, Optional
 from pydub import AudioSegment
 
+from src.config.config import config
 
 RATE = 44100
+CHUNK = 1024 * 4
 
 
 async def play_sound(file: BinaryIO) -> None:
@@ -29,16 +31,26 @@ async def play_sound(file: BinaryIO) -> None:
             channels=wf.getnchannels(),
             rate=wf.getframerate(),
             output=True,
-            output_device_index=1,
+            output_device_index=DEVICE_INDEX,
         )
 
         logger.info("Start playing sound.")
-        while len(data := wf.readframes(1024 * 4)):
+        while len(data := wf.readframes(CHUNK)):
             stream.write(data)
         stream.close()
         p.terminate()
         logger.info("Finish playing sound.")
 
 
+def get_device_index(py_audio: PyAudio, device_name: str) -> Optional[int]:
+    for index in range(py_audio.get_device_count()):
+        if device_name in str(py_audio.get_device_info_by_index(index)["name"]):
+            return index
+    return None
+
+
 logger = get_logger("Speaker")
+
+DEVICE_INDEX = get_device_index(PyAudio(), config["output_audio_device_name"])
+
 logger.info("Initialized.")

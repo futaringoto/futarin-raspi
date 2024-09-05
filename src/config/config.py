@@ -13,7 +13,9 @@ Config = TypedDict(
         "button_right_pin": Optional[int],
         "button_left_pin": Optional[int],
         "skip_introduction": Optional[bool],
-        "api_version": Optional[int],
+        "api_version": Optional[str],
+        "input_audio_device_name": Optional[str],
+        "output_audio_device_name": Optional[str],
     },
 )
 

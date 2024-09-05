@@ -1,9 +1,17 @@
 from logging import getLogger
 from pyaudio import PyAudio, get_sample_size, paInt16
-from typing import Callable
+from typing import Callable, Optional
 import wave
 from io import BytesIO
 from time import time
+
+from src.config.config import config
+
+
+CHUNK = 1024 * 8
+FORMAT = paInt16
+CHANNELS = 2
+RATE = 44100
 
 
 async def record(func: Callable[[], bool]) -> BytesIO:
@@ -22,7 +30,7 @@ async def record(func: Callable[[], bool]) -> BytesIO:
             channels=CHANNELS,
             rate=RATE,
             input=True,
-            input_device_index=INPUT_DEVICE_INDEX,
+            input_device_index=DEVICE_INDEX,
         )
         while func():
             wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
@@ -35,16 +43,15 @@ async def record(func: Callable[[], bool]) -> BytesIO:
     return buffer
 
 
+def get_device_index(py_audio: PyAudio, device_name: str) -> Optional[int]:
+    for index in range(py_audio.get_device_count()):
+        if device_name in str(py_audio.get_device_info_by_index(index)["name"]):
+            return index
+    return None
+
+
 logger = getLogger("Mic")
 
-CHUNK = 1024 * 8
-FORMAT = paInt16
-CHANNELS = 2
-RATE = 44100
-INPUT_DEVICE_INDEX = 1
+DEVICE_INDEX = get_device_index(PyAudio(), config["input_audio_device_name"])
 
 logger.debug("Initialized")
-
-# if __name__ == "__main__":
-#     logger.debug("Recording test")
-#     # TODO
