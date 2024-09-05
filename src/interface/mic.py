@@ -1,4 +1,3 @@
-from logging import getLogger
 from pyaudio import PyAudio, get_sample_size, paInt16
 from typing import Callable, Optional
 import wave
@@ -6,7 +5,7 @@ from io import BytesIO
 from time import time
 
 from src.config.config import config
-
+from src.log.logger import get_logger
 
 CHUNK = 1024 * 8
 FORMAT = paInt16
@@ -50,7 +49,7 @@ def get_device_index(py_audio: PyAudio, device_name: str) -> Optional[int]:
     return None
 
 
-logger = getLogger("Mic")
+logger = get_logger("Mic")
 
 DEVICE_INDEX = get_device_index(PyAudio(), config["input_audio_device_name"])
 
