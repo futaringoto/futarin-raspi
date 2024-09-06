@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import BinaryIO, Optional
 from pydub import AudioSegment
 
-from src.config.config import config
+import src.config.config as config
 
 RATE = 44100
 CHUNK = 1024 * 4
@@ -51,6 +51,6 @@ def get_device_index(py_audio: PyAudio, device_name: str) -> Optional[int]:
 
 logger = get_logger("Speaker")
 
-DEVICE_INDEX = get_device_index(PyAudio(), config["output_audio_device_name"])
+DEVICE_INDEX = get_device_index(PyAudio(), config.get("output_audio_device_name"))
 
 logger.info("Initialized.")
