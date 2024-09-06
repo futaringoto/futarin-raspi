@@ -9,7 +9,7 @@ from httpx import stream, codes
 import subprocess
 from pydub import AudioSegment
 
-from src.config.config import config
+import src.config.config as config
 from src.interface.button import Button
 from src.interface.mic import record
 from src.interface.speaker import play_sound
@@ -36,9 +36,9 @@ class Processes(Enum):
 class Interface:
     def __init__(self) -> None:
         self.logger = getLogger("Interface")
-        self.logger.debug(f"Left button Pin: {config['button_left_pin']}")
+        self.logger.debug(f"Left button Pin: {config.get('button_left_pin')}")
         self.button_left = Button(
-            config["button_left_pin"], logger=get_logger("ButtonLeft")
+            config.get("button_left_pin"), logger=get_logger("ButtonLeft")
         )
         self.logger.info("Initialized.")
 
@@ -75,7 +75,7 @@ class System:
         return True
 
     async def call_backend(self, audio_file) -> Optional[BytesIO]:
-        url = f"{config['api_origin']}/v{config['api_version']}/raspi/"
+        url = f"{config.get('api_origin')}/v{config.get('api_version')}/raspi/"
         files = {"file": ("record.wav", audio_file, "multipart/form-data")}
         with stream(
             "POST",
@@ -97,7 +97,7 @@ class System:
         return (
             True
             if subprocess.run(
-                ["ping", config["api_endpoint_url"], "-c 1", "-i 0.4"],
+                ["ping", config.get("api_endpoint_url"), "-c 1", "-i 0.4"],
                 capture_output=True,
             ).returncode
             == 0

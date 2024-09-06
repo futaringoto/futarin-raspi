@@ -1,82 +1,232 @@
-from os import getcwd
-from os.path import exists, join, dirname
-from argparse import ArgumentParser, FileType
+from typing import (
+    Callable,
+    Iterable,
+    Optional,
+    TypeVar,
+    Dict,
+    Generic,
+    Type,
+    Any,
+    TypedDict,
+    List,
+    NotRequired,
+    IO,
+)
+from argparse import (
+    ArgumentParser,
+    Action,
+    FileType,
+)
 import tomllib
-from typing import Dict, Any, Optional, TypedDict
+from os import getcwd, path
+
+from src.log.logger import get_logger
 
 FILE_NAME = "futarin.toml"
 
-Config = TypedDict(
-    "Config",
-    {
-        "api_origin": Optional[str],
-        "button_right_pin": Optional[int],
-        "button_left_pin": Optional[int],
-        "skip_introduction": Optional[bool],
-        "api_version": Optional[str],
-        "input_audio_device_name": Optional[str],
-        "output_audio_device_name": Optional[str],
-    },
-)
+
+T = TypeVar("T")
 
 
-def _get_config_from_args() -> Dict[str, Any]:
+class ArgparseOptions(TypedDict, Generic[T]):
+    name_or_flugs: List[str]
+    action: NotRequired[str | type[Action]]
+    nargs: NotRequired[int | str]
+    const: NotRequired[Any]
+    type: NotRequired[int | float | FileType | Callable]
+    choices: NotRequired[Iterable]
+    required: NotRequired[bool]
+    metavar: NotRequired[str | tuple[str, ...]]
+
+
+class Prop(TypedDict, Generic[T]):
+    name: str
+    value: NotRequired[T]
+    type: Type[T]
+    help: str
+    default: NotRequired[T]
+    argparse_options: NotRequired[ArgparseOptions]
+
+
+Config = Dict[str, Prop]
+
+
+class ConfigNotSetError(Exception):
+    def __init__(self, key):
+        self.key = key
+
+    def __str__(self):
+        return f"{self.key} has not been set"
+
+
+def add_prop(prop: Prop):
+    config[prop["name"]] = prop
+
+
+def get_arg_parser(config: Config) -> ArgumentParser:
     parser = ArgumentParser()
+    for prop in config.values():
+        if "argparse_options" in prop:
+            kwargs = {
+                k: v
+                for k, v in {**prop, **prop["argparse_options"]}.items()
+                if k
+                in [
+                    "action",
+                    "nargs",
+                    "const",
+                    "type",
+                    "choices",
+                    "required",
+                    "help",
+                    "metavar",
+                ]
+            }
+            if "action" in kwargs and "type" in kwargs:
+                kwargs.pop("type")
+            kwargs["dest"] = prop["name"]
+            parser.add_argument(
+                *prop["argparse_options"]["name_or_flugs"],
+                **kwargs,
+            )
+    return parser
 
-    parser.add_argument(
-        "-f",
-        "--config-file",
-        help="Set custom config file path.",
-        metavar="CONFIG_FILE_PATH",
-        type=FileType("rb"),
-        default=None,
-    )
 
-    parser.add_argument(
-        "--skip-introduction",
-        help="Skip playing introduction message at startup.",
-        action="store_true",
-    )
-
-    args = parser.parse_args()
-
-    return vars(args)
-
-
-def _get_config_from_file() -> Dict[str, Any]:
-    file_from_args = _config_from_args["config_file"]
-    if file_from_args:
-        return tomllib.load(file_from_args)
+def get_config_from_file(file: Optional[IO] = None):
+    if file:
+        return tomllib.load(file)
     else:
         search_dir = getcwd()
         while search_dir:
-            config_file_path = join(search_dir, FILE_NAME)
-            if exists(config_file_path):
+            config_file_path = path.join(search_dir, FILE_NAME)
+            if path.exists(config_file_path):
                 with open(config_file_path, "rb") as config_file:
                     return tomllib.load(config_file)
-            search_dir = None if search_dir == "/" else dirname(search_dir)
+            search_dir = None if search_dir == "/" else path.dirname(search_dir)
         raise FileNotFoundError("config file not found")
 
 
-def _generate_config() -> Config:
-    config = {}
-    for conf in [_config_from_file, _config_from_args]:
-        for key in Config.__annotations__.keys():
-            if key in conf:
-                config[key] = conf[key]
-    return config  # type: ignore
+def get(*keys: str, **keys_with_default: Any) -> Any:
+    if len(keys) == 1:
+        key = keys[0]
+        if key in config:
+            prop = config[key]
+            if "value" in prop:
+                return prop["value"]
+            elif "default" in prop:
+                return prop["default"]
+            else:
+                raise ConfigNotSetError(key)
+        else:
+            raise KeyError(f"{key} is not found from config")
+    elif len(keys_with_default) == 1:
+        key, value = next(iter(keys_with_default.items()))
+        if key in config:
+            prop = config[key]
+            if "value" in prop:
+                return prop["value"]
+            elif "default" in prop:
+                return prop["default"]
+            else:
+                return value
+        else:
+            raise KeyError(f"{key} is not found from config")
 
 
-def get(key: str) -> Any:
-    return config[key]
+def get_multiple(*keys: str, **keys_with_default: Any) -> tuple:
+    result: List[Any] = []
+    for key in keys:
+        if key in config:
+            prop: Prop = config[key]
+            if "value" in prop:
+                result.append(prop["value"])
+            elif "default" in prop:
+                result.append(prop["default"])
+            else:
+                raise ConfigNotSetError(key)
+        else:
+            raise KeyError(f"{key} is not found from config")
+
+    for key in keys_with_default.keys():
+        if key in config:
+            prop: Prop = config[key]
+            if "value" in prop:
+                result.append(prop["value"])
+            elif "default" in prop:
+                result.append(prop["default"])
+            else:
+                result.append(keys_with_default[key])
+        else:
+            raise KeyError(f"{key} is not found from config")
+
+    return tuple(result)
 
 
-_config_from_args = _get_config_from_args()  # read config from args
-_config_from_file = _get_config_from_file()  # read config from file
+logger = get_logger("Config")
 
-config: Config = _generate_config()
+config: Config = {}
+add_prop({"name": "api_origin", "type": str, "help": "Backend API origin"})
+add_prop({"name": "api_version", "type": str, "help": "Backend API version"})
+add_prop(
+    {
+        "name": "input_audio_device_name",
+        "type": str,
+        "help": "Input audio device(Microphone) name",
+    }
+)
+add_prop(
+    {
+        "name": "output_audio_device_name",
+        "type": str,
+        "help": "Output audio device(Speaker) name",
+    }
+)
+add_prop(
+    {
+        "name": "button_left_pin",
+        "type": int,
+        "help": "Left button pin number",
+        "default": 18,
+    }
+)
+add_prop(
+    {
+        "name": "skip_introduction",
+        "type": bool,
+        "help": "Skip playing introduction message at startup",
+        "default": False,
+        "argparse_options": {
+            "name_or_flugs": ["--skip-intro"],
+            "action": "store_true",
+        },
+    }
+)
+add_prop(
+    {
+        "name": "config_file",
+        "type": str,
+        "help": "Config file path(must be TOML)",
+        "argparse_options": {
+            "name_or_flugs": ["--config-file"],
+            "metavar": "CONFIG_FILE_PATH",
+            "type": FileType("rb"),
+        },
+    }
+)
+
+arg_parser = get_arg_parser(config)
+config_from_args = vars(arg_parser.parse_args())
+config_from_file = get_config_from_file(config_from_args.get("config_file"))
+
+for key, value in (config_from_file | config_from_args).items():
+    if key in config:
+        config[key]["value"] = value
+    else:
+        raise KeyError(f"{key} is not found from config")
+
+logger.info("Initialized")
 
 if __name__ == "__main__":
-    print(f"config_from_args: {_config_from_args}")
-    print(f"config_from_file: {_config_from_file}")
-    print(f"config: {config}")
+    print(f"{config_from_args=}")
+    print(f"{config_from_file=}")
+    print(f"{config=}")
