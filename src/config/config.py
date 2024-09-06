@@ -120,7 +120,7 @@ def get(*keys: str, **keys_with_default: Any) -> Any:
         else:
             raise KeyError(f"{key} is not found from config")
     elif len(keys_with_default) == 1:
-        key, value = next(iter(keys_with_default.items()))
+        key, value = next(iter(keys_with_default))
         if key in config:
             prop = config[key]
             if "value" in prop:
@@ -131,6 +131,11 @@ def get(*keys: str, **keys_with_default: Any) -> Any:
                 return value
         else:
             raise KeyError(f"{key} is not found from config")
+    else:
+        args_count = len(keys) + len(keys_with_default)
+        raise TypeError(
+            f"get() takes 1 position or keyword argument but {args_count} were given"
+        )
 
 
 def get_multiple(*keys: str, **keys_with_default: Any) -> tuple:
@@ -147,7 +152,7 @@ def get_multiple(*keys: str, **keys_with_default: Any) -> tuple:
         else:
             raise KeyError(f"{key} is not found from config")
 
-    for key in keys_with_default.keys():
+    for key, value in keys_with_default.items():
         if key in config:
             prop: Prop = config[key]
             if "value" in prop:
@@ -155,7 +160,7 @@ def get_multiple(*keys: str, **keys_with_default: Any) -> tuple:
             elif "default" in prop:
                 result.append(prop["default"])
             else:
-                result.append(keys_with_default[key])
+                result.append(value)
         else:
             raise KeyError(f"{key} is not found from config")
 
