@@ -6,7 +6,6 @@ from logging import getLogger
 import asyncio
 from typing import Optional
 from httpx import stream, codes
-import subprocess
 from pydub import AudioSegment
 
 import src.config.config as config
@@ -16,14 +15,10 @@ from src.interface.speaker import play_sound
 from src.log.logger import get_logger
 
 ### CONST ###
-CONFIG_FILE_NAME = "futarin.toml"
 WELCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/welcome.wav"  # type: ignore
 PLEASE_WAIT_MESSAGE_PATH: PathLike[str] = "assets/audio/please_wait.wav"  # type: ignore
 FAIL_MESSAGE_PATH: PathLike[str] = "assets/audio/fail.wav"  # type: ignore
 WHAT_HAPPEN_PATH: PathLike[str] = "assets/audio/whathappen.wav"  # type: ignore
-# CONNECTING_MESSAGE_PATH: PathLike[str] = "assets/audio/connecting.wav"  # type: ignore
-# CONNECTED_MESSAGE_PATH: PathLike[str] = "assets/audio/connected.wav"  # type: ignore
-# PING_INTERVAL_SEC: int = 4
 
 
 ### CLASS ###
@@ -92,17 +87,6 @@ class System:
     async def load_buffer_file(self, path: PathLike):
         with open(path, "rb") as bf:
             return BytesIO(bf.read())
-
-    async def ping_backend(self) -> bool:
-        return (
-            True
-            if subprocess.run(
-                ["ping", config.get("api_endpoint_url"), "-c 1", "-i 0.4"],
-                capture_output=True,
-            ).returncode
-            == 0
-            else False
-        )
 
 
 async def main() -> None:
