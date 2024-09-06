@@ -10,6 +10,7 @@ dependencies = [
     "pyaudio>=0.2.14",
     "rpi-lgpio>=0.6",
     "pydub>=0.25.1",
+    "flask>=3.0.3",
 ]
 
 [build-system]
