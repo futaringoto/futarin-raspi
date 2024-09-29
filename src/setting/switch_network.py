@@ -1,12 +1,5 @@
 from subprocess import run
 
-from enum import Enum
-
-
-class Mode(Enum):
-    AP = 1
-    CLIENT = 2
-
 
 def ap():
     run(["sudo", "systemctl", "stop", "systemd-networkd"])
@@ -38,5 +31,5 @@ def client():
 
     run(["sudo", "ip", "addr", "flush", "dev", "wlan0"])
 
+    run(["sudo", "netplan", "apply"])
     run(["sudo", "systemctl", "start", "systemd-resolved"])
-    run(["sudo", "systemctl", "start", "systemd-networkd"])

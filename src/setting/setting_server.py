@@ -26,7 +26,7 @@ def save_setting():
 
 
 def run():
-    app.run(port=8000, debug=True)
+    app.run(port=8000, debug=False)
 
 
 if __name__ == "__main__":
