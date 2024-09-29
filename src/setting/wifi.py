@@ -2,7 +2,6 @@ FILE_PATH = "./linux/netplan-config.yaml"
 
 
 def save(ssid, password):
-    print("WIFI called")
     yaml = "\n".join(
         [
             "network:",
