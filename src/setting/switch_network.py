@@ -10,6 +10,7 @@ class Mode(Enum):
 
 def ap():
     run(["sudo", "systemctl", "stop", "systemd-networkd"])
+    run(["sudo", "systemctl", "stop", "systemd-networkd.socket"])
     run(["sudo", "systemctl", "stop", "systemd-resolved"])
 
     run(["sudo", "ip", "addr", "add", "192.168.222.1", "dev", "wlan0"])
