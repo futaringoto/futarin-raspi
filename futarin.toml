@@ -1,6 +1,6 @@
 api_origin="" #example: http://example.com
 api_version="1"
-led_server_origin="http://0.0.0.0"
+led_server_origin="http://127.0.0.1:8080"
 button_left_pin=18
 input_audio_device_name="BY Y02"
 output_audio_device_name="BY Y02"
