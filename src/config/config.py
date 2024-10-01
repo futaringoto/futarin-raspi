@@ -174,6 +174,14 @@ add_prop({"name": "api_origin", "type": str, "help": "Backend API origin"})
 add_prop({"name": "api_version", "type": str, "help": "Backend API version"})
 add_prop(
     {
+        "name": "led_server_origin",
+        "type": str,
+        "help": "futarin-led server origin",
+        "default": "http://0.0.0.0:8080",
+    }
+)
+add_prop(
+    {
         "name": "input_audio_device_name",
         "type": str,
         "help": "Input audio device(Microphone) name",
