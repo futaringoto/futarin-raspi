@@ -23,7 +23,7 @@ class LedPatterns(Enum):
 
 
 led_endpoints = {
-    LedPatterns.WifiHigh: "/wifi/hith",
+    LedPatterns.WifiHigh: "/wifi/high",
     LedPatterns.WifiMiddle: "/wifi/middle",
     LedPatterns.WifiLow: "/wifi/low",
     LedPatterns.WifiDisconnect: "/wifi/disconnect",
