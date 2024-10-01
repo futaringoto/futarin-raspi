@@ -5,6 +5,7 @@ import src.config.config as config
 from src.log.logger import get_logger
 
 RETRES = 8
+STATUS_CODE = 202
 ORIGIN = config.get("led_server_origin")
 TRANSPORT = httpx.HTTPTransport(retries=RETRES)
 
@@ -36,12 +37,18 @@ led_endpoints = {
 
 async def set(led_pattern: LedPatterns):
     led_endpoint = led_endpoints[led_pattern]
+    url = f"{ORIGIN}{led_endpoint}"
     async with httpx.AsyncClient() as client:
         try:
-            r = await client.post(f"{ORIGIN}{led_endpoint}")
-            logger.info(f"POST: {led_endpoint} {r.status_code}")
+            r = await client.post(url)
+            if r.status_code == STATUS_CODE:
+                logger.info(f"Change LED lighting pattern. ({led_pattern})")
+            else:
+                logger.error(
+                    f'Failed to change LED lighting pattern ("POST {url}" r.status_code)'
+                )
         except httpx.HTTPError:
-            logger.error(f"POST: {led_endpoint}")
+            logger.error(f"Failed to change LED lighting pattern (POST {url})")
 
 
 if __name__ == "__main__":
