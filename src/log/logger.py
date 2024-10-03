@@ -1,6 +1,5 @@
 from logging import getLogger, Formatter, StreamHandler, FileHandler, Logger, DEBUG
 import json
-from httpx import Response
 
 LOG_FILE_NAME = "futarin-raspi.log"
 loggers = []
