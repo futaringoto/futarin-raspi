@@ -20,6 +20,8 @@ PLEASE_WAIT_MESSAGE_PATH: PathLike[str] = "assets/audio/please_wait.wav"  # type
 FAIL_MESSAGE_PATH: PathLike[str] = "assets/audio/fail.wav"  # type: ignore
 WHAT_HAPPEN_PATH: PathLike[str] = "assets/audio/whathappen.wav"  # type: ignore
 
+SKIP_INTRODUCTION = config.get("skip_introduction");
+
 
 ### CLASS ###
 class Processes(Enum):
@@ -93,9 +95,10 @@ async def main() -> None:
     system = System()
     logger = get_logger("Main")
 
-    logger.info("Play welcome message.")
-    welcome_audio_file = await system.load_buffer_file(WELCOME_MESSAGE_PATH)
-    await play_sound(welcome_audio_file)
+    if not SKIP_INTRODUCTION:
+        logger.info("Play welcome message.")
+        welcome_audio_file = await system.load_buffer_file(WELCOME_MESSAGE_PATH)
+        await play_sound(welcome_audio_file)
 
     logger.info("Start loop.")
 
