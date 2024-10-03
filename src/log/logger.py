@@ -1,5 +1,6 @@
 from logging import getLogger, Formatter, StreamHandler, FileHandler, Logger, DEBUG
 import json
+from httpx import Response
 
 LOG_FILE_NAME = "futarin-raspi.log"
 loggers = []
@@ -18,7 +19,8 @@ def get_logger(name: str, console: bool = True, file: bool = True) -> Logger:
 
 class FileFormatter(Formatter):
     def format(self, record):
-        return json.dumps(record.__dict__)
+        print(type(record.message))
+        return json.dumps(record.__dict__, default=str)
 
 
 console_formatter = Formatter(
