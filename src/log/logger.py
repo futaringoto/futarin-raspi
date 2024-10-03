@@ -18,7 +18,7 @@ def get_logger(name: str, console: bool = True, file: bool = True) -> Logger:
 
 class FileFormatter(Formatter):
     def format(self, record):
-        return json.dumps(record.__dict__)
+        return json.dumps(record.__dict__, default=str)
 
 
 console_formatter = Formatter(
