@@ -196,6 +196,14 @@ add_prop(
 )
 add_prop(
     {
+        "name": "delta_volume",
+        "type": int,
+        "help": "Delta Volume(decibel) (Default volume - this)",
+        "default": 0,
+    }
+)
+add_prop(
+    {
         "name": "skip_introduction",
         "type": bool,
         "help": "Skip playing introduction message at startup",

@@ -7,6 +7,7 @@ from pydub import AudioSegment
 
 import src.config.config as config
 
+DELTA_VOLUME = config.get("delta_volume");
 RATE = 44100
 CHUNK = 1024 * 4
 
@@ -20,7 +21,7 @@ async def play_sound(file: BinaryIO) -> None:
             frame_rate=wf.getframerate(),
             channels=wf.getnchannels(),
         )
-        audio = audio.set_frame_rate(RATE)
+        audio = audio.set_frame_rate(RATE) + DELTA_VOLUME
         processed_file = BytesIO()
         processed_file = audio.export(processed_file, format="wav")
 
