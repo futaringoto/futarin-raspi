@@ -19,8 +19,7 @@ from argparse import (
 )
 import tomllib
 from os import getcwd, path
-
-from src.log.logger import get_logger
+import src.log.log as log
 
 FILE_NAME = "futarin.toml"
 
@@ -167,11 +166,18 @@ def get_multiple(*keys: str, **keys_with_default: Any) -> tuple:
     return tuple(result)
 
 
-logger = get_logger("Config")
+logger = log.get_logger("Config")
 
 config: Config = {}
 add_prop({"name": "api_origin", "type": str, "help": "Backend API origin"})
 add_prop({"name": "api_version", "type": str, "help": "Backend API version"})
+add_prop(
+    {
+        "name": "id",
+        "type": int,
+        "help": "futarin id",
+    }
+)
 add_prop(
     {
         "name": "led_server_origin",

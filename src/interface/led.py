@@ -1,18 +1,22 @@
 import httpx
-import asyncio
+import time
 from enum import Enum, auto
 import src.config.config as config
-from src.log.logger import get_logger
+import src.log.log as log
+import threading
 
-RETRES = 8
-STATUS_CODE = 202
+RETRIES = 2
+CODE_SUCCESS = 202
 ORIGIN = config.get("led_server_origin")
-TRANSPORT = httpx.HTTPTransport(retries=RETRES)
+CHECK_INTERVAL = 0.2
+TRANSPORT = httpx.HTTPTransport(retries=RETRIES)
 
-logger = get_logger("Led")
 
-
-class LedPatterns(Enum):
+class LedPattern(Enum):
+    SystemOn = auto()
+    SystemSetup = auto()
+    SystemOff = auto()
+    SystemTurnOff = auto()
     WifiHigh = auto()
     WifiMiddle = auto()
     WifiLow = auto()
@@ -21,35 +25,63 @@ class LedPatterns(Enum):
     AudioThinking = auto()
     AudioResSuccess = auto()
     AudioResFail = auto()
+    AudioUploading = auto()
+    AudioReceive = auto()
 
 
 led_endpoints = {
-    LedPatterns.WifiHigh: "/wifi/high",
-    LedPatterns.WifiMiddle: "/wifi/middle",
-    LedPatterns.WifiLow: "/wifi/low",
-    LedPatterns.WifiDisconnect: "/wifi/disconnect",
-    LedPatterns.AudioListening: "/audio/listening",
-    LedPatterns.AudioThinking: "/audio/thinking",
-    LedPatterns.AudioResSuccess: "/audio/res-success",
-    LedPatterns.AudioResFail: "/audio/res-fail",
+    LedPattern.SystemOn: "/system/on",
+    LedPattern.SystemSetup: "/system/setup",
+    LedPattern.SystemOff: "/system/off",
+    LedPattern.SystemTurnOff: "/system/turn_off",
+    LedPattern.WifiHigh: "/wifi/high",
+    LedPattern.WifiMiddle: "/wifi/middle",
+    LedPattern.WifiLow: "/wifi/low",
+    LedPattern.WifiDisconnect: "/wifi/disconnect",
+    LedPattern.AudioListening: "/audio/listening",
+    LedPattern.AudioThinking: "/audio/thinking",
+    LedPattern.AudioResSuccess: "/audio/res-success",
+    LedPattern.AudioResFail: "/audio/res-fail",
+    LedPattern.AudioUploading: "/audio/uploading",
+    LedPattern.AudioReceive: "/audio/receive",
 }
 
 
-async def set(led_pattern: LedPatterns):
-    led_endpoint = led_endpoints[led_pattern]
-    url = f"{ORIGIN}{led_endpoint}"
-    async with httpx.AsyncClient() as client:
-        try:
-            r = await client.post(url)
-            if r.status_code == STATUS_CODE:
-                logger.info(f"Change LED lighting pattern. ({led_pattern})")
+class Led(threading.Thread):
+    def __init__(self):
+        super().__init__(daemon=True, name="Led")
+        self.logger = log.get_logger("Led")
+        self.pattern = None
+        self.pattern_req = None
+
+    def run(self):
+        while True:
+            if self.pattern != self.pattern_req:
+                led_endpoint = led_endpoints[self.pattern_req]
+                url = f"{ORIGIN}{led_endpoint}"
+                with httpx.Client(transport=TRANSPORT) as client:
+                    try:
+                        r = client.post(url)
+                        if r.status_code == CODE_SUCCESS:
+                            self.pattern = self.pattern_req
+                            self.logger.info(
+                                f"Change LED lighting pattern. ({self.pattern})"
+                            )
+                        else:
+                            self.logger.error(
+                                f'Failed to change LED lighting pattern ("POST {url}" r.status_code)'
+                            )
+                    except httpx.HTTPError:
+                        self.logger.error(
+                            f"Failed to change LED lighting pattern (POST {url})"
+                        )
             else:
-                logger.error(
-                    f'Failed to change LED lighting pattern ("POST {url}" r.status_code)'
-                )
-        except httpx.HTTPError:
-            logger.error(f"Failed to change LED lighting pattern (POST {url})")
+                time.sleep(CHECK_INTERVAL)
+
+    ### Send request to futarin-led server
+    def req(self, led_pattern: LedPattern):
+        self.pattern_req = led_pattern
 
 
-if __name__ == "__main__":
-    asyncio.run(set(LedPatterns.WifiHigh))
+led = Led()
+led.start()
