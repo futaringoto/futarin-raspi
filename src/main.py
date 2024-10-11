@@ -4,6 +4,8 @@ import src.log.log as log
 from src.interface.wifi import wifi
 from src.backend.api import api
 from src.interface.led import led, LedPattern
+from src.interface.speaker import speaker, LocalVox
+from src.interface.button import button
 
 ### Alias
 ct = asyncio.create_task
@@ -12,7 +14,19 @@ ct = asyncio.create_task
 async def main():
     logger = log.get_logger("Main")
     await wait_for_network()
-    logger.info("finished main")
+    await main_loop()
+    await shutdown()
+
+
+async def main_loop():
+    led.req(LedPattern.AudioResSuccess)
+    playing_welcome_message_thread = speaker.play_local_vox(LocalVox.WelcomeVox)
+
+    button.wait_for_push_both()
+
+
+async def shutdown():
+    led.req(LedPattern.SystemTurnOff)
 
 
 async def wait_for_network():
@@ -26,10 +40,11 @@ async def wait_for_network():
     )
 
     if wait_for_wifi_enable_task in done:
-        led.req(wifi.strength())
+        # led.req(wifi.strength()) # TODO
         await wait_for_connect_to_api_task
-    else:
-        led.req(LedPattern.WifiHigh)
+
+    # if wait_for_connect_to_api_task is done
+    led.req(LedPattern.WifiHigh)
 
 
 if __name__ == "__main__":

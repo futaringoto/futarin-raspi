@@ -1,9 +1,9 @@
 import httpx
-import time
 from enum import Enum, auto
+import threading
 import src.config.config as config
 import src.log.log as log
-import threading
+
 
 RETRIES = 2
 CODE_SUCCESS = 202
@@ -47,41 +47,28 @@ led_endpoints = {
 }
 
 
-class Led(threading.Thread):
+class Led:
     def __init__(self):
-        super().__init__(daemon=True, name="Led")
         self.logger = log.get_logger("Led")
-        self.pattern = None
-        self.pattern_req = None
 
-    def run(self):
-        while True:
-            if self.pattern != self.pattern_req:
-                led_endpoint = led_endpoints[self.pattern_req]
-                url = f"{ORIGIN}{led_endpoint}"
-                with httpx.Client(transport=TRANSPORT) as client:
-                    try:
-                        r = client.post(url)
-                        if r.status_code == CODE_SUCCESS:
-                            self.pattern = self.pattern_req
-                            self.logger.info(
-                                f"Change LED lighting pattern. ({self.pattern})"
-                            )
-                        else:
-                            self.logger.error(
-                                f'Failed to change LED lighting pattern ("POST {url}" r.status_code)'
-                            )
-                    except httpx.HTTPError:
-                        self.logger.error(
-                            f"Failed to change LED lighting pattern (POST {url})"
-                        )
-            else:
-                time.sleep(CHECK_INTERVAL)
-
-    ### Send request to futarin-led server
     def req(self, led_pattern: LedPattern):
-        self.pattern_req = led_pattern
+        thread = threading.Thread(target=self.req_for_thread, args=(led_pattern,))
+        thread.run()
+
+    def req_for_thread(self, led_pattern: LedPattern):
+        led_endpoint = led_endpoints[led_pattern]
+        url = f"{ORIGIN}{led_endpoint}"
+        with httpx.Client(transport=TRANSPORT) as client:
+            try:
+                r = client.post(url)
+                if r.status_code == CODE_SUCCESS:
+                    self.logger.info(f"Change LED pattern. ({led_pattern})")
+                else:
+                    self.logger.error(
+                        f'Failed to change LED pattern ("POST {url}" r.status_code)'
+                    )
+            except httpx.HTTPError:
+                self.logger.error(f"Failed to change LED pattern (POST {url})")
 
 
 led = Led()
-led.start()
