@@ -170,7 +170,6 @@ logger = log.get_logger("Config")
 
 config: Config = {}
 add_prop({"name": "api_origin", "type": str, "help": "Backend API origin"})
-add_prop({"name": "api_version", "type": str, "help": "Backend API version"})
 add_prop(
     {
         "name": "id",
@@ -183,7 +182,7 @@ add_prop(
         "name": "led_server_origin",
         "type": str,
         "help": "futarin-led server origin",
-        "default": "http://0.0.0.0:8080",
+        "default": "http://127.0.0.1:8080",
     }
 )
 add_prop(
@@ -191,6 +190,7 @@ add_prop(
         "name": "input_audio_device_name",
         "type": str,
         "help": "Input audio device(Microphone) name",
+        "default": "BY Y02",
     }
 )
 add_prop(
@@ -198,14 +198,23 @@ add_prop(
         "name": "output_audio_device_name",
         "type": str,
         "help": "Output audio device(Speaker) name",
+        "default": "BY Y02",
     }
 )
 add_prop(
     {
-        "name": "button_left_pin",
+        "name": "main_button_pin",
         "type": int,
-        "help": "Left button pin number",
+        "help": "Main button pin number",
         "default": 18,
+    }
+)
+add_prop(
+    {
+        "name": "sub_button_pin",
+        "type": int,
+        "help": "Sub button pin number",
+        "default": 24,
     }
 )
 add_prop(

@@ -17,13 +17,19 @@ CHUNK = 1024 * 4
 
 
 class LocalVox(Enum):
-    WelcomeVox = auto()
-    ShutdownVox = auto()
+    Welcome = auto()
+    Shutdown = auto()
+    WhatHappen = auto()
+    KeepPressing = auto()
+    ResFail = auto()
 
 
 local_vox_paths: Dict[LocalVox, str | PathLike] = {
-    LocalVox.WelcomeVox: "assets/vox/welcome.mp3",
-    LocalVox.ShutdownVox: "assets/vox/shutdown.mp3",  # TODO
+    LocalVox.Welcome: "assets/vox/welcome.wav",
+    LocalVox.Shutdown: "assets/vox/shutdown.wav",  # TODO
+    LocalVox.WhatHappen: "assets/vox/whathappen.wav",
+    LocalVox.KeepPressing: "assets/vox/fail.wav",  # TODO
+    LocalVox.ResFail: "assets/vox/fail.wav",
 }
 
 
@@ -43,7 +49,7 @@ class Speaker:
 
     def play(self, file: BinaryIO) -> threading.Thread:
         thread = self.play_for_thread(file, self.device_name)
-        thread.run()
+        thread.start()
         return thread
 
     class play_for_thread(threading.Thread):

@@ -1,51 +1,122 @@
 import asyncio
 
 import src.log.log as log
+from src.interface.mic import mic
 from src.interface.wifi import wifi
 from src.backend.api import api
 from src.interface.led import led, LedPattern
 from src.interface.speaker import speaker, LocalVox
-from src.interface.button import button
+from src.interface.button import button, ButtonEnum
+from pydub import AudioSegment
+from enum import Enum, auto
 
 ### Alias
 ct = asyncio.create_task
 
 
-async def main():
-    logger = log.get_logger("Main")
-    await wait_for_network()
-    await main_loop()
-    await shutdown()
+class Mode(Enum):
+    Normal = auto()
+    Message = auto()
 
 
-async def main_loop():
-    led.req(LedPattern.AudioResSuccess)
-    playing_welcome_message_thread = speaker.play_local_vox(LocalVox.WelcomeVox)
+class Main:
+    def __init__(self):
+        self.mode = Mode.Normal
 
-    button.wait_for_push_both()
+    async def main(self):
+        self.logger = log.get_logger("Main")
+        await self.wait_for_network()
+        await self.main_loop()
+        await self.shutdown()
 
+    async def main_loop(self):
+        led.req(LedPattern.AudioResSuccess)
+        playing_welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
-async def shutdown():
-    led.req(LedPattern.SystemTurnOff)
+        await api.req_ws_url()
+        await api.start_ws()
+        while True:
+            pressed_button = await button.wait_for_press_either()
 
+            playing_welcome_message_thread.stop()
+            playing_welcome_message_thread.join()
 
-async def wait_for_network():
-    wait_for_wifi_enable_task = ct(wifi.wait_for_enable())
-    wait_for_connect_to_api_task = ct(api.wait_for_connect())
-    led.req(LedPattern.SystemSetup)
+            self.logger.debug(pressed_button)
 
-    done, pending = await asyncio.wait(
-        (wait_for_wifi_enable_task, wait_for_connect_to_api_task),
-        return_when=asyncio.FIRST_COMPLETED,
-    )
+            if pressed_button == ButtonEnum.Main:
+                if self.mode == Mode.Normal:
+                    await self.normal()
+                else:
+                    await self.message()
+            else:
+                await self.switch_mode()
 
-    if wait_for_wifi_enable_task in done:
-        # led.req(wifi.strength()) # TODO
-        await wait_for_connect_to_api_task
+    async def switch_mode(self):
+        if self.mode == Mode.Normal:
+            self.mode = Mode.Message
+        else:
+            self.mode = Mode.Normal
 
-    # if wait_for_connect_to_api_task is done
-    led.req(LedPattern.WifiHigh)
+    async def message(self):
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
+        playing_what_happen_thread.join()
+
+        recoard_thread = mic.record()
+        await button.wait_for_release_main()
+        recoard_thread.stop()
+        recoard_thread.join()
+        file = recoard_thread.get_recorded_file()
+        await api.messages(file)
+
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
+        playing_what_happen_thread.join()
+
+    async def normal(self):
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
+        playing_what_happen_thread.join()
+
+        recoard_thread = mic.record()
+        await button.wait_for_release_main()
+        recoard_thread.stop()
+        recoard_thread.join()
+        file = recoard_thread.get_recorded_file()
+        if not await self.check_recorded_file(file):
+            speaker.play_local_vox(LocalVox.KeepPressing)
+            return
+        while True:
+            received_file = await api.normal(file)
+            if received_file:
+                thread = speaker.play(received_file)
+                thread.join()
+                break
+
+    async def check_recorded_file(self, audio_file) -> bool:
+        audio = AudioSegment.from_file(audio_file, "wav")
+        if audio.duration_seconds < 1:
+            return False
+        return True
+
+    async def shutdown(self):
+        led.req(LedPattern.SystemTurnOff)
+
+    async def wait_for_network(self):
+        wait_for_wifi_enable_task = ct(wifi.wait_for_enable())
+        wait_for_connect_to_api_task = ct(api.wait_for_connect())
+        led.req(LedPattern.SystemSetup)
+
+        done, pending = await asyncio.wait(
+            (wait_for_wifi_enable_task, wait_for_connect_to_api_task),
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+        if wait_for_wifi_enable_task in done:
+            # led.req(wifi.strength()) # TODO
+            await wait_for_connect_to_api_task
+
+        # if wait_for_connect_to_api_task is done
+        led.req(LedPattern.WifiHigh)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main = Main()
+    asyncio.run(main.main())
