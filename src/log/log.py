@@ -16,9 +16,6 @@ class Log:
             "%(asctime)s.%(msecs)03d %(levelname)s [%(name)s]: %(message)s",
             datefmt="%H:%M:%S",
         )
-        self.logger = self.get_logger("LoggerManager")
-        self.logger.info("Initialized.")
-
         self.file_formatter = FileFormatter()
         self.file_handler = FileHandler(filename=LOG_FILE_NAME)
         self.file_handler.setLevel(DEBUG)
@@ -28,6 +25,9 @@ class Log:
         self.console_handler.setLevel(DEBUG)
         self.console_handler.setFormatter(self.console_formatter)
 
+        self.logger = self.get_logger("LoggerManager")
+        self.logger.info("Initialized.")
+
     def get_logger(self, name: str, console: bool = True, file: bool = True) -> Logger:
         logger = getLogger(name)
         logger.setLevel(DEBUG)
@@ -35,7 +35,7 @@ class Log:
             logger.addHandler(self.console_handler)
         if file:
             logger.addHandler(self.file_handler)
-        self.loggers.append(self.logger)
+        self.loggers.append(logger)
         return logger
 
 

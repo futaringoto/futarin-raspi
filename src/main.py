@@ -36,14 +36,31 @@ class Main:
         # Establish a WebSockets connection
         await api.req_ws_url()
         while True:
-            pressed_button = await button.wait_for_press_either()
+            wait_for_main_press_task = ct(button.wait_for_press_main())
+            wait_for_sub_press_task = ct(button.wait_for_press_sub())
+            wait_for_notification_task = asyncio.create_task(
+                api.wait_for_notification()
+            )
 
-            if False:
-                self.logger.debug("WebSocket Fire")
-                message_id = await wait_for_ws_tasks
-                self.logger.debug(message_id)
+            done, _ = await asyncio.wait(
+                {
+                    wait_for_main_press_task,
+                    wait_for_sub_press_task,
+                    # wait_for_notification_task, # TODO
+                },
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            # if notified
+            if wait_for_notification_task in done:
+                self.logger.debug("Notified")
+                message_id = await wait_for_notification_task
+                self.logger.debug(f"message_id = {message_id}")
+                led.req(LedPattern.AudioReceive)
+
                 received_file = await api.get_message(message_id)
                 await button.wait_for_press_either()
+
                 playing_receive_message_thread = speaker.play_local_vox(
                     LocalVox.ReceiveMessage
                 )
