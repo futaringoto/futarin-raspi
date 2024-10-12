@@ -5,7 +5,6 @@ import src.log.log as log
 from enum import Enum, auto
 import httpx
 import asyncio
-from websockets.sync.client import connect
 import websockets
 
 PING_INTERVAL = 10
@@ -84,6 +83,23 @@ class Api:
                 break
             await asyncio.sleep(PING_INTERVAL)
 
+    async def get_message(self, message_id):
+        endpoint = f"endpoints[Endpoint.Messages]/{message_id}"
+        url = f"{ORIGIN}{endpoint}"
+        try:
+            with httpx.stream(
+                "GET",
+                url,
+                timeout=120,
+            ) as response:
+                self.logger.debug(vars(response))
+                if response.status_code == httpx.codes.OK:
+                    return BytesIO(response.read())
+                else:
+                    return None
+        except httpx.HTTPError:
+            return False
+
     async def req_ws_url(self) -> bool:
         endpoint = endpoints[Endpoint.WsNegotiate]
         url = f"{ORIGIN}{endpoint}"
@@ -99,13 +115,27 @@ class Api:
                 self.logger.error(e)
                 return False
 
+    async def wait_for_notification(self):
+        message_id = None
+        try:
+            async with websockets.connect(self.ws_url) as ws:
+                self.logger.info("Connected.")
+                await ws.send(f'{{"action": "register", "clientId": {ID}}}')
+                print(await ws.recv())
+                self.logger(message_id)
+        except websockets.exceptions.ConnectionClosedOK:
+            self.logger.info("Connection closed by the server")
+
+    ## not using
     async def start_ws(self):
         self.ws_thread = self.websocket_for_thread(self.ws_url)
         self.ws_thread.start()
 
+    ## not using
     async def get_notification(self):
         return self.ws_thread.get_notification()
 
+    ## not using
     class websocket_for_thread(threading.Thread):
         def __init__(self, ws_url, name="WebsocketThread"):
             super().__init__(name=name)

@@ -34,28 +34,51 @@ class Main:
         playing_welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
         await api.req_ws_url()
-        await api.start_ws()
         while True:
-            pressed_button = await button.wait_for_press_either()
+            wait_for_button_task = ct(button.wait_for_press_either())
+            wait_for_ws_task = ct(api.wait_for_notification())
+            done, _ = await asyncio.wait(
+                {wait_for_button_task, wait_for_ws_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
 
-            playing_welcome_message_thread.stop()
-            playing_welcome_message_thread.join()
-
-            self.logger.debug(pressed_button)
-
-            if pressed_button == ButtonEnum.Main:
-                if self.mode == Mode.Normal:
-                    await self.normal()
-                else:
-                    await self.message()
+            if wait_for_ws_task in done:
+                self.logger.debug("WebSocket Fire")
+                message_id = await wait_for_ws_tasks
+                self.logger.debug(message_id)
+                received_file = await api.get_message(message_id)
+                await button.wait_for_press_either()
+                playing_receive_message_thread = speaker.play_local_vox(
+                    LocalVox.ReceiveMessage
+                )
+                playing_receive_message_thread.join()
+                speaker.play(received_file)
             else:
-                await self.switch_mode()
+                pressed_button = await wait_for_button_task
+
+                playing_welcome_message_thread.stop()
+                playing_welcome_message_thread.join()
+
+                self.logger.debug(pressed_button)
+
+                if pressed_button == ButtonEnum.Main:
+                    if self.mode == Mode.Normal:
+                        await self.normal()
+                    else:
+                        await self.message()
+                else:
+                    await self.switch_mode()
 
     async def switch_mode(self):
         if self.mode == Mode.Normal:
             self.mode = Mode.Message
+            messages_mode_message_thread = speaker.play_local_vox(LocalVox.MessagesMode)
+            messages_mode_message_thread.join()
+
         else:
             self.mode = Mode.Normal
+            normal_mode_message_thread = speaker.play_local_vox(LocalVox.NormalMode)
+            normal_mode_message_thread.join()
 
     async def message(self):
         playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
@@ -68,7 +91,7 @@ class Main:
         file = recoard_thread.get_recorded_file()
         await api.messages(file)
 
-        playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.SendMessage)
         playing_what_happen_thread.join()
 
     async def normal(self):
