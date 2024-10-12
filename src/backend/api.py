@@ -1,8 +1,10 @@
 import src.config.config as config
+from src.interface.led import led, LedPattern
 from io import BytesIO
 import threading
 import src.log.log as log
 from enum import Enum, auto
+from typing import Optional
 import httpx
 import asyncio
 import websockets
@@ -33,47 +35,61 @@ class Api:
     def __init__(self):
         self.logger = log.get_logger("Api")
 
-    async def ping(self) -> bool:
+    async def get(
+        self, endpoint: Endpoint, file=None, retries=5
+    ) -> Optional[httpx.codes]:
         endpoint = endpoints[Endpoint.Ping]
         url = f"{ORIGIN}{endpoint}"
-        async with httpx.AsyncClient() as client:
-            try:
-                r = await client.get(url)
-                return r.status_code == httpx.codes.OK
-            except httpx.HTTPError:
-                return False
+        if file:
+            pass
+        else:
+            for i in range(retries):
+                async with httpx.AsyncClient() as client:
+                    try:
+                        r = await client.get(url)
+                        return r.status_code
+                    except httpx.HTTPError:
+                        continue
+            return None
 
-    async def normal(self, audio_file) -> bool:
+    async def post(
+        self, endpoint: Endpoint, audio_file=None, retries=5
+    ) -> Optional[httpx.codes]:
         endpoint = endpoints[Endpoint.Normal]
         url = f"{ORIGIN}{endpoint}"
-        files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-        try:
-            with httpx.stream(
-                "POST",
-                url,
-                files=files,
-                timeout=120,
-            ) as response:
-                self.logger.debug(vars(response))
-                if response.status_code == httpx.codes.OK:
-                    return BytesIO(response.read())
-                else:
-                    return None
-        except httpx.HTTPError:
-            return False
+        if audio_file:
+            files = {"file": ("record.wav", audio_file, "multipart/form-data")}
+            for i in range(retries):
+                try:
+                    with httpx.stream(
+                        "POST",
+                        url,
+                        files=files,
+                        timeout=120,
+                    ) as response:
+                        if response.status_code == httpx.codes.OK:
+                            return BytesIO(response.read())
+                        else:
+                            continue
+                except httpx.HTTPError:
+                    continue
+            return None
+
+    async def ping(self) -> bool:
+        status_code = await self.get(Endpoint.Ping)
+        return status_code == httpx.codes.OK
+
+    async def normal(self, audio_file) -> bool:
+        led.req(LedPattern.AudioThinking)
+        response_file = await self.post(Endpoint.Normal, audio_file=audio_file)
+        led.req(LedPattern.AudioResSuccess)
+        return response_file
 
     async def messages(self, audio_file) -> bool:
-        endpoint = endpoints[Endpoint.Messages]
-        url = f"{ORIGIN}{endpoint}"
-        files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-        with httpx.stream(
-            "POST",
-            url,
-            files=files,
-            timeout=120,
-        ) as response:
-            self.logger.debug(vars(response))
-            return response.status_code == httpx.codes.OK
+        led.req(LedPattern.AudioUploading)
+        response_file = await self.post(Endpoint.Messages, audio_file=audio_file)
+        led.req(LedPattern.AudioResSuccess)
+        return response_file
 
     async def wait_for_connect(self):
         self.logger.info("Try to connect API")

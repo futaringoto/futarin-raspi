@@ -1,4 +1,5 @@
 from pyaudio import PyAudio
+from src.interface.led import led, LedPattern
 import threading
 import wave
 from io import BytesIO
@@ -98,6 +99,8 @@ class Speaker:
                 )
 
                 self.logger.info("Start playing sound.")
+                led.req(LedPattern.AudioReceive)
+
                 while len(data := wf.readframes(CHUNK)):
                     if not self.stop_req:
                         stream.write(data)

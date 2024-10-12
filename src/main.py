@@ -1,5 +1,6 @@
 import asyncio
 
+
 import src.log.log as log
 from src.interface.mic import mic
 from src.interface.wifi import wifi
@@ -30,19 +31,15 @@ class Main:
         await self.shutdown()
 
     async def main_loop(self):
-        led.req(LedPattern.AudioResSuccess)
+        # Play welcome message
         playing_welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
+        # Establish a WebSockets connection
         await api.req_ws_url()
         while True:
-            wait_for_button_task = ct(button.wait_for_press_either())
-            wait_for_ws_task = ct(api.wait_for_notification())
-            done, _ = await asyncio.wait(
-                {wait_for_button_task, wait_for_ws_task},
-                return_when=asyncio.FIRST_COMPLETED,
-            )
+            pressed_button = await button.wait_for_press_either()
 
-            if wait_for_ws_task in done:
+            if False:
                 self.logger.debug("WebSocket Fire")
                 message_id = await wait_for_ws_tasks
                 self.logger.debug(message_id)
@@ -54,8 +51,6 @@ class Main:
                 playing_receive_message_thread.join()
                 speaker.play(received_file)
             else:
-                pressed_button = await wait_for_button_task
-
                 playing_welcome_message_thread.stop()
                 playing_welcome_message_thread.join()
 
