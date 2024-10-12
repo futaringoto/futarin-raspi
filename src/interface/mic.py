@@ -4,7 +4,7 @@ import wave
 from io import BytesIO
 import threading
 import src.config.config as config
-import src.log.log as log
+from src.log.log import log
 
 
 CHUNK = 1024 * 8

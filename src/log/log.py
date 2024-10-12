@@ -2,18 +2,6 @@ from logging import getLogger, Formatter, StreamHandler, FileHandler, Logger, DE
 import json
 
 LOG_FILE_NAME = "futarin-raspi.log"
-loggers = []
-
-
-def get_logger(name: str, console: bool = True, file: bool = True) -> Logger:
-    logger = getLogger(name)
-    logger.setLevel(DEBUG)
-    if console:
-        logger.addHandler(console_handler)
-    if file:
-        logger.addHandler(file_handler)
-    loggers.append(logger)
-    return logger
 
 
 class FileFormatter(Formatter):
@@ -21,25 +9,34 @@ class FileFormatter(Formatter):
         return json.dumps(record.__dict__, default=str)
 
 
-console_formatter = Formatter(
-    "%(asctime)s.%(msecs)03d %(levelname)s [%(name)s]: %(message)s",
-    datefmt="%H:%M:%S",
-)
-file_formatter = FileFormatter()
+class Log:
+    def __init__(self):
+        self.loggers = []
+        self.console_formatter = Formatter(
+            "%(asctime)s.%(msecs)03d %(levelname)s [%(name)s]: %(message)s",
+            datefmt="%H:%M:%S",
+        )
+        self.logger = self.get_logger("LoggerManager")
+        self.logger.info("Initialized.")
 
-console_handler = StreamHandler()
-console_handler.setLevel(DEBUG)
-console_handler.setFormatter(console_formatter)
+        self.file_formatter = FileFormatter()
+        self.file_handler = FileHandler(filename=LOG_FILE_NAME)
+        self.file_handler.setLevel(DEBUG)
+        self.file_handler.setFormatter(self.file_formatter)
 
-file_handler = FileHandler(filename=LOG_FILE_NAME)
-file_handler.setLevel(DEBUG)
-file_handler.setFormatter(file_formatter)
+        self.console_handler = StreamHandler()
+        self.console_handler.setLevel(DEBUG)
+        self.console_handler.setFormatter(self.console_formatter)
 
-logger = get_logger("LoggerManager")
-logger.info("Initialized.")
+    def get_logger(self, name: str, console: bool = True, file: bool = True) -> Logger:
+        logger = getLogger(name)
+        logger.setLevel(DEBUG)
+        if console:
+            logger.addHandler(self.console_handler)
+        if file:
+            logger.addHandler(self.file_handler)
+        self.loggers.append(self.logger)
+        return logger
 
 
-if __name__ == "__main__":
-    logger = get_logger("Test")
-    logger.info("This is test message on info.")
-    logger.debug("This is test message on debug.")
+log = Log()

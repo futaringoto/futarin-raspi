@@ -1,7 +1,7 @@
 import gpiozero
 import asyncio
 import src.config.config as config
-import src.log.log as log
+from src.log.log import log
 from enum import Enum, auto
 
 
@@ -32,8 +32,7 @@ class Button:
         for task in done:
             if wait_for_main_press_task in done:
                 return ButtonEnum.Main
-            else:
-                return ButtonEnum.Sub
+        return ButtonEnum.Sub
 
     async def wait_for_release_main(self):
         while self.main.is_pressed:

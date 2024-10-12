@@ -1,12 +1,13 @@
 import src.config.config as config
 from io import BytesIO
+from src.log.log import log
 import threading
-import src.log.log as log
-from enum import Enum, auto
 import httpx
 import asyncio
+from typing import Optional
 from websockets.sync.client import connect
 import websockets
+from enum import Enum, auto
 
 PING_INTERVAL = 10
 ORIGIN = config.get("api_origin")
@@ -44,7 +45,7 @@ class Api:
             except httpx.HTTPError:
                 return False
 
-    async def normal(self, audio_file) -> bool:
+    async def normal(self, audio_file) -> Optional[BytesIO]:
         endpoint = endpoints[Endpoint.Normal]
         url = f"{ORIGIN}{endpoint}"
         files = {"file": ("record.wav", audio_file, "multipart/form-data")}
@@ -61,7 +62,7 @@ class Api:
                 else:
                     return None
         except httpx.HTTPError:
-            return False
+            return None
 
     async def messages(self, audio_file) -> bool:
         endpoint = endpoints[Endpoint.Messages]

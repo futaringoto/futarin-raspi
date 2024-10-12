@@ -1,6 +1,6 @@
 import asyncio
 
-import src.log.log as log
+from src.log.log import log
 from src.interface.mic import mic
 from src.interface.wifi import wifi
 from src.backend.api import api
