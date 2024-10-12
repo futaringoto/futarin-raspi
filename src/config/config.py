@@ -19,7 +19,7 @@ from argparse import (
 )
 import tomllib
 from os import getcwd, path
-import src.log.log as log
+from src.log.log import log
 
 FILE_NAME = "futarin.toml"
 

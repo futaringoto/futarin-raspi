@@ -2,7 +2,7 @@ import httpx
 from enum import Enum, auto
 import threading
 import src.config.config as config
-import src.log.log as log
+from src.log.log import log
 
 
 RETRIES = 2

@@ -1,13 +1,20 @@
 import src.config.config as config
 from src.interface.led import led, LedPattern
 from io import BytesIO
+from src.log.log import log
 import threading
+<<<<<<< HEAD
 import src.log.log as log
 from enum import Enum, auto
 from typing import Optional
+=======
+>>>>>>> refs/remotes/origin/id/043
 import httpx
 import asyncio
+from typing import Optional
+from websockets.sync.client import connect
 import websockets
+from enum import Enum, auto
 
 PING_INTERVAL = 10
 ORIGIN = config.get("api_origin")
@@ -40,6 +47,7 @@ class Api:
     ) -> Optional[httpx.codes]:
         endpoint = endpoints[Endpoint.Ping]
         url = f"{ORIGIN}{endpoint}"
+<<<<<<< HEAD
         if file:
             pass
         else:
@@ -84,6 +92,33 @@ class Api:
         response_file = await self.post(Endpoint.Normal, audio_file=audio_file)
         led.req(LedPattern.AudioResSuccess)
         return response_file
+=======
+        async with httpx.AsyncClient() as client:
+            try:
+                r = await client.get(url)
+                return r.status_code == httpx.codes.OK
+            except httpx.HTTPError:
+                return False
+
+    async def normal(self, audio_file) -> Optional[BytesIO]:
+        endpoint = endpoints[Endpoint.Normal]
+        url = f"{ORIGIN}{endpoint}"
+        files = {"file": ("record.wav", audio_file, "multipart/form-data")}
+        try:
+            with httpx.stream(
+                "POST",
+                url,
+                files=files,
+                timeout=120,
+            ) as response:
+                self.logger.debug(vars(response))
+                if response.status_code == httpx.codes.OK:
+                    return BytesIO(response.read())
+                else:
+                    return None
+        except httpx.HTTPError:
+            return None
+>>>>>>> refs/remotes/origin/id/043
 
     async def messages(self, audio_file) -> bool:
         led.req(LedPattern.AudioUploading)

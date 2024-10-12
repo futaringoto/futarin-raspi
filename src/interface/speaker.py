@@ -6,7 +6,7 @@ from io import BytesIO
 from typing import BinaryIO, Optional
 from pydub import AudioSegment
 import src.config.config as config
-import src.log.log as log
+from src.log.log import log
 from enum import Enum, auto
 from os import PathLike
 from typing import Dict

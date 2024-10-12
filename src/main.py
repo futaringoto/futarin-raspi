@@ -1,15 +1,14 @@
 import asyncio
+from pydub import AudioSegment
+from enum import Enum, auto
 
-
-import src.log.log as log
+from src.log.log import log
 from src.interface.mic import mic
 from src.interface.wifi import wifi
 from src.backend.api import api
 from src.interface.led import led, LedPattern
 from src.interface.speaker import speaker, LocalVox
 from src.interface.button import button, ButtonEnum
-from pydub import AudioSegment
-from enum import Enum, auto
 
 ### Alias
 ct = asyncio.create_task
