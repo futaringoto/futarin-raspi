@@ -52,7 +52,7 @@ class Main:
             )
 
             # if notified
-            if wait_for_notification_task in done:
+            if True and wait_for_notification_task in done:
                 self.logger.debug("Notified")
                 message_id = await wait_for_notification_task
                 self.logger.debug(f"message_id = {message_id}")
