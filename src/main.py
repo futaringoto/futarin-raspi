@@ -115,11 +115,17 @@ class Main:
         playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
         playing_what_happen_thread.join()
 
+        print(0)
         recoard_thread = mic.record()
+        print(1)
         await button.wait_for_release_main()
+        print(2)
         recoard_thread.stop()
+        print(3)
         recoard_thread.join()
+        print(4)
         file = recoard_thread.get_recorded_file()
+        print(5)
         if not await self.check_recorded_file(file):
             speaker.play_local_vox(LocalVox.KeepPressing)
             return
