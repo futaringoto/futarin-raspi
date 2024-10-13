@@ -38,9 +38,9 @@ class Main:
         while True:
             wait_for_main_press_task = ct(button.wait_for_press_main())
             wait_for_sub_press_task = ct(button.wait_for_press_sub())
-            wait_for_notification_task = asyncio.create_task(
-                api.wait_for_notification()
-            )
+            # wait_for_notification_task = asyncio.create_task(
+            #     api.wait_for_notification()
+            # )
 
             done, _ = await asyncio.wait(
                 {
@@ -69,6 +69,12 @@ class Main:
             else:
                 playing_welcome_message_thread.stop()
                 playing_welcome_message_thread.join()
+
+                pressed_button = (
+                    ButtonEnum.Main
+                    if wait_for_main_press_task in done
+                    else ButtonEnum.Sub
+                )
 
                 self.logger.debug(pressed_button)
 
