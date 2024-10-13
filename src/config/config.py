@@ -258,9 +258,9 @@ for key, value in (config_from_file | config_from_args).items():
     if key in config:
         config[key]["value"] = value
     else:
-        raise KeyError(f"{key} is not found from config")
+        logger.warn(f"{key} is not found from config")
 
-logger.info("Initialized")
+logger.info("Initialized.")
 
 if __name__ == "__main__":
     print(f"{config_from_args=}")

@@ -28,14 +28,22 @@ class Main:
         await self.wait_for_network()
         await self.main_loop()
         await self.shutdown()
+        self.logger.info("Initialized")
 
     async def main_loop(self):
-        # Play welcome message
+        self.logger.info("Start main loop")
+        self.logger.info("Play welcome message")
         playing_welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
-        # Establish a WebSockets connection
+        self.logger.info("Establihs a WebSockets connection.")
         await api.req_ws_url()
+
         while True:
+            self.logger.info("Start infinity loop.")
+
+            self.logger.info(
+                "Wait for button to press or receiving notification on WebSockets."
+            )
             wait_for_main_press_task = ct(button.wait_for_press_main())
             wait_for_sub_press_task = ct(button.wait_for_press_sub())
             # wait_for_notification_task = asyncio.create_task(
@@ -51,7 +59,6 @@ class Main:
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
-            # if notified
             if False and wait_for_notification_task in done:
                 self.logger.debug("Notified")
                 message_id = await wait_for_notification_task
@@ -67,6 +74,7 @@ class Main:
                 playing_receive_message_thread.join()
                 speaker.play(received_file)
             else:
+                self.logger.info("Try to stop welcome message.")
                 playing_welcome_message_thread.stop()
                 playing_welcome_message_thread.join()
 
@@ -76,31 +84,38 @@ class Main:
                     else ButtonEnum.Sub
                 )
 
-                self.logger.debug(pressed_button)
+                self.logger.debug(f"{pressed_button} was pressed.")
 
                 if pressed_button == ButtonEnum.Main:
                     if self.mode == Mode.Normal:
+                        self.logger.debug("Call normal mode.")
                         await self.normal()
                     else:
+                        self.logger.debug("Call message mode.")
                         await self.message()
                 else:
+                    self.logger.debug("Call switch_mode.")
                     await self.switch_mode()
 
     async def switch_mode(self):
         if self.mode == Mode.Normal:
+            self.logger.info("Switch to message mode.")
             self.mode = Mode.Message
             messages_mode_message_thread = speaker.play_local_vox(LocalVox.MessagesMode)
             messages_mode_message_thread.join()
 
         else:
             self.mode = Mode.Normal
+            self.logger.info("Switch to normal mode.")
             normal_mode_message_thread = speaker.play_local_vox(LocalVox.NormalMode)
             normal_mode_message_thread.join()
 
     async def message(self):
+        self.logger.info("Start message mode")
         playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
         playing_what_happen_thread.join()
 
+        self.logger.info("Record message to send.")
         recoard_thread = mic.record()
         await button.wait_for_release_main()
         recoard_thread.stop()
@@ -112,6 +127,7 @@ class Main:
         playing_what_happen_thread.join()
 
     async def normal(self):
+        self.logger.info("Start message mode")
         playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
         playing_what_happen_thread.join()
 

@@ -6,11 +6,11 @@ PING_INTERVAL = 10
 
 
 class Wifi:
+    ## TODO
     async def wait_for_enable(self):
         while not await self.strength():
             await asyncio.sleep(PING_INTERVAL)
 
-    # TODO
     async def strength(self) -> Optional[int]:
         return None
         # proc = await asyncio.create_subprocess_shell(

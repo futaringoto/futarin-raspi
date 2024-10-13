@@ -35,14 +35,13 @@ endpoints = {
 class Api:
     def __init__(self):
         self.logger = log.get_logger("Api")
+        self.logger.info("Initialized.")
 
-    async def get(
-        self, endpoint: Endpoint, file=None, retries=5
-    ) -> Optional[httpx.codes]:
-        endpoint = endpoints[Endpoint.Ping]
+    async def get(self, endpoint_enum: Endpoint, file=None, retries=5) -> Optional[int]:
+        endpoint = endpoints[endpoint_enum]
         url = f"{ORIGIN}{endpoint}"
         if file:
-            pass
+            self.logger.error("Not implemented.")
         else:
             for i in range(retries):
                 async with httpx.AsyncClient() as client:
@@ -54,13 +53,13 @@ class Api:
             return None
 
     async def post(
-        self, endpoint: Endpoint, audio_file=None, retries=5
-    ) -> Optional[httpx.codes]:
-        endpoint = endpoints[Endpoint.Normal]
+        self, endpoint_enum: Endpoint, audio_file=None, retries=5
+    ) -> Optional[BytesIO] | Optional[httpx.codes]:
+        endpoint = endpoints[endpoint_enum]
         url = f"{ORIGIN}{endpoint}"
         if audio_file:
             files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-            for i in range(retries):
+            for _ in range(retries):
                 try:
                     with httpx.stream(
                         "POST",
@@ -75,18 +74,20 @@ class Api:
                 except httpx.HTTPError:
                     continue
             return None
+        else:
+            self.logger.error("Not implemented.")
 
     async def ping(self) -> bool:
         status_code = await self.get(Endpoint.Ping)
         return status_code == httpx.codes.OK
 
-    async def normal(self, audio_file) -> bool:
+    async def normal(self, audio_file) -> Optional[BytesIO]:
         led.req(LedPattern.AudioThinking)
         response_file = await self.post(Endpoint.Normal, audio_file=audio_file)
         led.req(LedPattern.AudioResSuccess)
         return response_file
 
-    async def messages(self, audio_file) -> bool:
+    async def messages(self, audio_file) -> Optional[BytesIO]:
         led.req(LedPattern.AudioUploading)
         response_file = await self.post(Endpoint.Messages, audio_file=audio_file)
         led.req(LedPattern.AudioResSuccess)
@@ -142,7 +143,7 @@ class Api:
 
                 print(await ws.recv())
 
-                self.logger(message_id)
+                self.logger.debug(message_id)
 
         except websockets.exceptions.ConnectionClosedOK:
             self.logger.info("WebSockets connection closed by the server")
