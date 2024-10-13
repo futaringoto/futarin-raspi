@@ -115,6 +115,7 @@ class Speaker:
                     py_audio.get_device_info_by_index(index)["name"]
                 ):
                     return index
+            self.logger.warn("Output audio device not found")
             return None
 
         def stop(self):
