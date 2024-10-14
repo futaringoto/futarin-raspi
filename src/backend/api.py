@@ -80,6 +80,7 @@ class Api:
         self.logger.info("Try to connect API")
         while True:
             success = await self.ping()
+            self.logger.debug(f"{success=}")
             if success:
                 self.logger.info("Wifi connected.")
                 break
