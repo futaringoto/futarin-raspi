@@ -108,6 +108,7 @@ class Api:
     async def get_message(self):
         endpoint = f"endpoints[Endpoint.Messages]/{self.message_id}"
         url = f"{ORIGIN}{endpoint}"
+        self.logger.debug(endpoint, url)
         for _ in range(RETRIES):
             try:
                 with httpx.stream(
