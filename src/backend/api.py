@@ -108,7 +108,7 @@ class Api:
     async def get_message(self):
         endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"
         url = f"{ORIGIN}{endpoint}"
-        self.logger.debug(endpoint, url)
+        self.logger.debug("========================", endpoint, url)
         for _ in range(RETRIES):
             try:
                 with httpx.stream(
@@ -121,8 +121,8 @@ class Api:
                         return BytesIO(response.read())
                     else:
                         continue
-            except httpx.HTTPError as e:
-                self.logger.debug("fail", e)
+            except httpx.HTTPError:
+                self.logger.debug("fail")
                 continue
         return None
 
