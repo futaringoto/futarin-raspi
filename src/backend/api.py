@@ -126,7 +126,7 @@ class Api:
 
     async def wait_for_notification(self):
         self.logger.debug("Wait for notification.")
-        while not self.notified:
+        while self.notified:
             await asyncio.sleep(SENSOR_INTERVAL)
 
     async def start_listening_notification(self):
