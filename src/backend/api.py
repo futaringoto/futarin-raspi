@@ -147,4 +147,5 @@ class Api:
                 except websockets.exceptions:
                     self.logger.info("WebSockets connection closed by the server.")
 
-    api = Api()
+
+api = Api()
