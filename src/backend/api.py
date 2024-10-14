@@ -37,7 +37,7 @@ class Api:
         self.logger = log.get_logger("Api")
         self.logger.info("Initialized.")
         self.notified = False
-        self.message_id = "Happy"
+        self.message_id = None
 
     async def get(self, endpoint: str, file=None, retries=5) -> Optional[int]:
         url = f"{ORIGIN}{endpoint}"
@@ -152,20 +152,19 @@ class Api:
 
     async def run_websockets(self):
         while True:
-            async with connect(self.ws_url) as websocket:
-                try:
-                    async with connect(self.ws_url) as ws:
-                        self.logger.info("WebSockets connected.")
-                        await ws.send(f'{{"action": "register", "clientId": {ID}}}')
+            try:
+                async with connect(self.ws_url) as ws:
+                    self.logger.info("WebSockets connected.")
+                    await ws.send(f'{{"action": "register", "clientId": {ID}}}')
 
-                        while True:
-                            self.logger.info("Listening notification.")
-                            self.message_id = await ws.recv()
-                            self.notified = True
-                            self.logger.info("Notified.")
+                    while True:
+                        self.logger.info("Listening notification.")
+                        self.message_id = await ws.recv()
+                        self.notified = True
+                        self.logger.info("Notified.")
 
-                except websockets.exceptions:
-                    self.logger.info("WebSockets connection closed by the server.")
+            except websockets.exceptions:
+                self.logger.info("WebSockets connection closed by the server.")
 
 
 api = Api()
