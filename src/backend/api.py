@@ -2,12 +2,11 @@ import src.config.config as config
 from src.interface.led import led, LedPattern
 from io import BytesIO
 from src.log.log import log
-import threading
 import httpx
 import asyncio
-from typing import Optional
-from websockets.sync.client import connect
+from websockets.asyncio.client import connect
 import websockets
+from typing import Optional
 from enum import Enum, auto
 
 PING_INTERVAL = 10
@@ -15,6 +14,7 @@ ORIGIN = config.get("api_origin")
 VERSION = 2
 ID = config.get("id")
 RETRIES = 4
+SENSOR_INTERVAL = 0.1
 
 
 class Endpoint(Enum):
@@ -37,8 +37,7 @@ class Api:
         self.logger = log.get_logger("Api")
         self.logger.info("Initialized.")
 
-    async def get(self, endpoint_enum: Endpoint, file=None, retries=5) -> Optional[int]:
-        endpoint = endpoints[endpoint_enum]
+    async def get(self, endpoint: str, file=None, retries=5) -> Optional[int]:
         url = f"{ORIGIN}{endpoint}"
         if file:
             self.logger.error("Not implemented.")
@@ -77,8 +76,16 @@ class Api:
         else:
             self.logger.error("Not implemented.")
 
+    async def wait_for_connect(self):
+        self.logger.info("Try to connect API")
+        while True:
+            success = await self.ping()
+            if success:
+                break
+            await asyncio.sleep(PING_INTERVAL)
+
     async def ping(self) -> bool:
-        status_code = await self.get(Endpoint.Ping)
+        status_code = await self.get(endpoints[Endpoint.Ping])
         return status_code == httpx.codes.OK
 
     async def normal(self, audio_file) -> Optional[BytesIO]:
@@ -93,32 +100,13 @@ class Api:
         led.req(LedPattern.AudioResSuccess)
         return response_file
 
-    # Wait for ping success
-    async def wait_for_connect(self):
-        self.logger.info("Try to connect API")
-        while True:
-            success = await self.ping()
-            if success:
-                break
-            await asyncio.sleep(PING_INTERVAL)
-
-    async def get_message(self, message_id):
-        endpoint = f"endpoints[Endpoint.Messages]/{message_id}"
+    async def get_message(self):
+        endpoint = f"endpoints[Endpoint.Messages]/{self.message_id}"
         url = f"{ORIGIN}{endpoint}"
-        try:
-            with httpx.stream(
-                "GET",
-                url,
-                timeout=120,
-            ) as response:
-                self.logger.debug(vars(response))
-                if response.status_code == httpx.codes.OK:
-                    return BytesIO(response.read())
-                else:
-                    return None
-        except httpx.HTTPError:
-            return False
+        received_file = await self.get(endpoint)
+        return received_file
 
+    ### Notification
     async def req_ws_url(self) -> bool:
         endpoint = endpoints[Endpoint.WsNegotiate]
         url = f"{ORIGIN}{endpoint}"
@@ -135,54 +123,26 @@ class Api:
                 return False
 
     async def wait_for_notification(self):
-        message_id = None
-        try:
-            async with websockets.connect(self.ws_url) as ws:
-                self.logger.info("WebSockets connected.")
-                await ws.send(f'{{"action": "register", "clientId": {ID}}}')
+        self.logger.debug("Wait for notification.")
+        while not self.notified:
+            await asyncio.sleep(SENSOR_INTERVAL)
 
-                print(await ws.recv())
+    async def start_listening_notification(self):
+        self.ws_task = asyncio.create_task(self.run_websockets())
 
-                self.logger.debug(message_id)
-
-        except websockets.exceptions.ConnectionClosedOK:
-            self.logger.info("WebSockets connection closed by the server")
-
-    ## not using
-    async def start_ws(self):
-        self.ws_thread = self.websocket_for_thread(self.ws_url)
-        self.ws_thread.start()
-
-    ## not using
-    async def get_notification(self):
-        return self.ws_thread.get_notification()
-
-    ## not using
-    class websocket_for_thread(threading.Thread):
-        def __init__(self, ws_url, name="WebsocketThread"):
-            super().__init__(name=name)
-            self.is_notified = False
-            self.ws_url = ws_url
-            self.logger = log.get_logger("WebsocketThread")
-
-        def run(self):
-            while True:
+    async def run_websockets(self):
+        while True:
+            async with connect(self.ws_url) as websocket:
                 try:
-                    with connect(self.ws_url) as ws:
-                        self.logger.info("Connected.")
-                        ws.send(f'{{"action": "register", "clientId": {ID}}}')
+                    async with connect(self.ws_url) as ws:
+                        self.logger.info("WebSockets connected.")
+                        await ws.send(f'{{"action": "register", "clientId": {ID}}}')
+
                         while True:
-                            ws.recv()
-                            self.is_notified = True
-                except websockets.exceptions.ConnectionClosedOK:
-                    self.logger.info("Connection closed by the server")
+                            self.logger.info("Listening notification.")
+                            self.message_id = await ws.recv()
+                            self.notified = True
+                            self.logger.info("Notified.")
 
-        def get_notification(self) -> bool:
-            if self.is_notified:
-                self.is_notified = False
-                return True
-            else:
-                return False
-
-
-api = Api()
+                except websockets.exceptions:
+                    self.logger.info("WebSockets connection closed by the server.")

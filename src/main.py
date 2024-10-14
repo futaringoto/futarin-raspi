@@ -37,6 +37,7 @@ class Main:
 
         self.logger.info("Establihs a WebSockets connection.")
         await api.req_ws_url()
+        await api.start_listening_notification()
 
         while True:
             self.logger.info("Start infinity loop.")
@@ -46,33 +47,32 @@ class Main:
             )
             wait_for_main_press_task = ct(button.wait_for_press_main())
             wait_for_sub_press_task = ct(button.wait_for_press_sub())
-            # wait_for_notification_task = asyncio.create_task(
-            #     api.wait_for_notification()
-            # )
+            wait_for_notification_task = ct(api.wait_for_notification())
 
             done, _ = await asyncio.wait(
                 {
                     wait_for_main_press_task,
                     wait_for_sub_press_task,
-                    # wait_for_notification_task, # TODO
+                    wait_for_notification_task,
                 },
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
-            if False and wait_for_notification_task in done:
-                self.logger.debug("Notified")
-                message_id = await wait_for_notification_task
-                self.logger.debug(f"message_id = {message_id}")
+            if wait_for_notification_task in done:
+                self.logger.debug("Checked notification")
                 led.req(LedPattern.AudioReceive)
 
-                received_file = await api.get_message(message_id)
+                received_file = await api.get_message()
                 await button.wait_for_press_either()
 
                 playing_receive_message_thread = speaker.play_local_vox(
                     LocalVox.ReceiveMessage
                 )
                 playing_receive_message_thread.join()
+
+                led.req(LedPattern.AudioResSuccess)
                 speaker.play(received_file)
+
             else:
                 self.logger.info("Try to stop welcome message.")
                 playing_welcome_message_thread.stop()
@@ -166,10 +166,8 @@ class Main:
         )
 
         if wait_for_wifi_enable_task in done:
-            # led.req(wifi.strength()) # TODO
             await wait_for_connect_to_api_task
 
-        # if wait_for_connect_to_api_task is done
         led.req(LedPattern.WifiHigh)
 
 
