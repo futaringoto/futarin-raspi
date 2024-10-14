@@ -59,6 +59,8 @@ class Main:
             )
 
             if wait_for_notification_task in done:
+                playing_welcome_message_thread.stop()
+                playing_welcome_message_thread.join()
                 self.logger.debug("Checked notification")
                 led.req(LedPattern.AudioReceive)
 
@@ -71,6 +73,7 @@ class Main:
                 playing_receive_message_thread.join()
 
                 led.req(LedPattern.AudioResSuccess)
+                log.logger.debug(received_file)
                 speaker.play(received_file)
 
             else:
