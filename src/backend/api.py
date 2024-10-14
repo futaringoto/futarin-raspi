@@ -37,7 +37,7 @@ class Api:
         self.logger = log.get_logger("Api")
         self.logger.info("Initialized.")
         self.notified = False
-        self.message_id = None
+        self.message_id = "Happy"
 
     async def get(self, endpoint: str, file=None, retries=5) -> Optional[int]:
         url = f"{ORIGIN}{endpoint}"
