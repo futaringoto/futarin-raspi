@@ -41,30 +41,6 @@ local_vox_paths: Dict[LocalVox, str | PathLike] = {
 }
 
 
-class Speaker:
-    def __init__(self):
-        self.logger = log.get_logger("Speaker")
-        self.device_name = config.get("speaker_name")
-        self.logger.info("Initialized")
-
-    def play_local_vox(self, local_vox: LocalVox) -> PlayThread:
-        self.logger.info(f"Play local vox. ({LocalVox=})")
-        path = local_vox_paths[local_vox]
-        return self.play_by_path(path)
-
-    def play_by_path(self, path: str | PathLike) -> PlayThread:
-        self.logger.info(f"Play sound by path. ({path=})")
-        with open(path, "rb") as bf:
-            buffer_file = BytesIO(bf.read())
-            return self.play(buffer_file)
-
-    def play(self, file: BinaryIO) -> PlayThread:
-        self.logger.info("Play sound.")
-        thread = PlayThread(file, self.device_name)
-        thread.start()
-        return thread
-
-
 class PlayThread(threading.Thread):
     def __init__(
         self,
@@ -129,6 +105,30 @@ class PlayThread(threading.Thread):
     def stop(self):
         self.logger.info("Stop requested.")
         self.stop_req = True
+
+
+class speaker:
+    def __init__(self):
+        self.logger = log.get_logger("speaker")
+        self.device_name = config.get("speaker_name")
+        self.logger.info("initialized")
+
+    def play_local_vox(self, local_vox: localvox) -> playthread:
+        self.logger.info(f"play local vox. ({local_vox=})")
+        path = local_vox_paths[local_vox]
+        return self.play_by_path(path)
+
+    def play_by_path(self, path: str | PathLike) -> PlayThread:
+        self.logger.info(f"Play sound by path. ({path=})")
+        with open(path, "rb") as bf:
+            buffer_file = BytesIO(bf.read())
+            return self.play(buffer_file)
+
+    def play(self, file: BinaryIO) -> PlayThread:
+        self.logger.info("Play sound.")
+        thread = PlayThread(file, self.device_name)
+        thread.start()
+        return thread
 
 
 speaker = Speaker()
