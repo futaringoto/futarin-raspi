@@ -17,7 +17,7 @@ RATE = 44100
 class Mic:
     def __init__(self):
         self.logger = log.get_logger("Mic")
-        self.device_name = config.get("input_audio_device_name")
+        self.device_name = config.get("mic_name")
         self.logger.info("Initialized.")
 
     def record(self) -> threading.Thread:

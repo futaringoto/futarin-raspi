@@ -187,17 +187,17 @@ add_prop(
 )
 add_prop(
     {
-        "name": "input_audio_device_name",
+        "name": "mic_name",
         "type": str,
-        "help": "Input audio device(Microphone) name",
+        "help": "Microphone name",
         "default": "BY Y02",
     }
 )
 add_prop(
     {
-        "name": "output_audio_device_name",
+        "name": "speaker_name",
         "type": str,
-        "help": "Output audio device(Speaker) name",
+        "help": "Speaker name",
         "default": "BY Y02",
     }
 )
