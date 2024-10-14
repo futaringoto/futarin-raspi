@@ -120,8 +120,8 @@ class Api:
                         return BytesIO(response.read())
                     else:
                         continue
-            except httpx.HTTPError:
-                self.logger.debug("fail")
+            except httpx.HTTPError as e:
+                self.logger.debug("fail", e)
                 continue
         return None
 
