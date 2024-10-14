@@ -115,11 +115,13 @@ class Api:
                     url,
                     timeout=120,
                 ) as response:
+                    self.logger.debug(response, response.status_code)
                     if response.status_code == httpx.codes.OK:
                         return BytesIO(response.read())
                     else:
                         continue
             except httpx.HTTPError:
+                self.logger.debug("fail")
                 continue
         return None
 
