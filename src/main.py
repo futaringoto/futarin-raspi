@@ -1,69 +1,150 @@
-from io import BytesIO
-from os import PathLike
-from sys import exit
-from enum import Enum
-from logging import getLogger
 import asyncio
-from typing import Optional
-from httpx import stream, codes
 from pydub import AudioSegment
+from enum import Enum, auto
 
-import src.config.config as config
-from src.interface.button import Button
-from src.interface.mic import record
-from src.interface.speaker import play_sound
-from src.log.logger import get_logger
+from src.log.log import log
+from src.interface.mic import mic
+from src.interface.wifi import wifi
+from src.backend.api import api
+from src.interface.led import led, LedPattern
+from src.interface.speaker import speaker, LocalVox
+from src.interface.button import button, ButtonEnum
 
-### CONST ###
-WELCOME_MESSAGE_PATH: PathLike[str] = "assets/audio/welcome.wav"  # type: ignore
-PLEASE_WAIT_MESSAGE_PATH: PathLike[str] = "assets/audio/please_wait.wav"  # type: ignore
-FAIL_MESSAGE_PATH: PathLike[str] = "assets/audio/fail.wav"  # type: ignore
-WHAT_HAPPEN_PATH: PathLike[str] = "assets/audio/whathappen.wav"  # type: ignore
-
-SKIP_INTRODUCTION = config.get("skip_introduction");
+### Alias
+ct = asyncio.create_task
 
 
-### CLASS ###
-class Processes(Enum):
-    ListenMessage = 0
-    TrainMessage = 1
+class Mode(Enum):
+    Normal = auto()
+    Message = auto()
 
 
-## Interface ##
-class Interface:
-    def __init__(self) -> None:
-        self.logger = getLogger("Interface")
-        self.logger.debug(f"Left button Pin: {config.get('button_left_pin')}")
-        self.button_left = Button(
-            config.get("button_left_pin"), logger=get_logger("ButtonLeft")
-        )
-        self.logger.info("Initialized.")
+class Main:
+    def __init__(self):
+        self.mode = Mode.Normal
 
+    async def main(self):
+        self.logger = log.get_logger("Main")
+        await self.wait_for_network()
+        await self.main_loop()
+        await self.shutdown()
+        self.logger.info("Initialized")
 
-class System:
-    def __init__(self) -> None:
-        self.interface = Interface()
-        self.logger = get_logger("System")
-        self.logger.info("Initialized.")
+    async def main_loop(self):
+        self.logger.info("Start main loop")
+        self.logger.info("Play welcome message")
+        playing_welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
-    async def train_message(self) -> None:
-        self.logger.info("Train called.")
-        whathappen = await self.load_buffer_file(WHAT_HAPPEN_PATH)
-        await play_sound(whathappen)
-        file = await record(self.interface.button_left.is_pressed)
-        if not await self.check_recorded_file(file):
-            fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
-            await play_sound(fail_msg)
-            return
-        backend_task = asyncio.create_task(self.call_backend(file))
-        audio_file = await self.load_buffer_file(PLEASE_WAIT_MESSAGE_PATH)
-        await play_sound(audio_file)
-        processed_file = await backend_task
-        if processed_file:
-            await play_sound(processed_file)
+        self.logger.info("Establihs a WebSockets connection.")
+        await api.req_ws_url()
+
+        while True:
+            self.logger.info("Start infinity loop.")
+
+            self.logger.info(
+                "Wait for button to press or receiving notification on WebSockets."
+            )
+            wait_for_main_press_task = ct(button.wait_for_press_main())
+            wait_for_sub_press_task = ct(button.wait_for_press_sub())
+            # wait_for_notification_task = asyncio.create_task(
+            #     api.wait_for_notification()
+            # )
+
+            done, _ = await asyncio.wait(
+                {
+                    wait_for_main_press_task,
+                    wait_for_sub_press_task,
+                    # wait_for_notification_task, # TODO
+                },
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            if False and wait_for_notification_task in done:
+                self.logger.debug("Notified")
+                message_id = await wait_for_notification_task
+                self.logger.debug(f"message_id = {message_id}")
+                led.req(LedPattern.AudioReceive)
+
+                received_file = await api.get_message(message_id)
+                await button.wait_for_press_either()
+
+                playing_receive_message_thread = speaker.play_local_vox(
+                    LocalVox.ReceiveMessage
+                )
+                playing_receive_message_thread.join()
+                speaker.play(received_file)
+            else:
+                self.logger.info("Try to stop welcome message.")
+                playing_welcome_message_thread.stop()
+                playing_welcome_message_thread.join()
+
+                pressed_button = (
+                    ButtonEnum.Main
+                    if wait_for_main_press_task in done
+                    else ButtonEnum.Sub
+                )
+
+                self.logger.debug(f"{pressed_button} was pressed.")
+
+                if pressed_button == ButtonEnum.Main:
+                    if self.mode == Mode.Normal:
+                        self.logger.debug("Call normal mode.")
+                        await self.normal()
+                    else:
+                        self.logger.debug("Call message mode.")
+                        await self.message()
+                else:
+                    self.logger.debug("Call switch_mode.")
+                    await self.switch_mode()
+
+    async def switch_mode(self):
+        if self.mode == Mode.Normal:
+            self.logger.info("Switch to message mode.")
+            self.mode = Mode.Message
+            messages_mode_message_thread = speaker.play_local_vox(LocalVox.MessagesMode)
+            messages_mode_message_thread.join()
+
         else:
-            fail_msg = await self.load_buffer_file(FAIL_MESSAGE_PATH)
-            await play_sound(fail_msg)
+            self.mode = Mode.Normal
+            self.logger.info("Switch to normal mode.")
+            normal_mode_message_thread = speaker.play_local_vox(LocalVox.NormalMode)
+            normal_mode_message_thread.join()
+
+    async def message(self):
+        self.logger.info("Start message mode")
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
+        playing_what_happen_thread.join()
+
+        self.logger.info("Record message to send.")
+        recoard_thread = mic.record()
+        await button.wait_for_release_main()
+        recoard_thread.stop()
+        recoard_thread.join()
+        file = recoard_thread.get_recorded_file()
+        await api.messages(file)
+
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.SendMessage)
+        playing_what_happen_thread.join()
+
+    async def normal(self):
+        self.logger.info("Start message mode")
+        playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatHappen)
+        playing_what_happen_thread.join()
+
+        recoard_thread = mic.record()
+        await button.wait_for_release_main()
+        recoard_thread.stop()
+        recoard_thread.join()
+        file = recoard_thread.get_recorded_file()
+        if not await self.check_recorded_file(file):
+            speaker.play_local_vox(LocalVox.KeepPressing)
+            return
+        while True:
+            received_file = await api.normal(file)
+            if received_file:
+                thread = speaker.play(received_file)
+                thread.join()
+                break
 
     async def check_recorded_file(self, audio_file) -> bool:
         audio = AudioSegment.from_file(audio_file, "wav")
@@ -71,44 +152,27 @@ class System:
             return False
         return True
 
-    async def call_backend(self, audio_file) -> Optional[BytesIO]:
-        url = f"{config.get('api_origin')}/v{config.get('api_version')}/raspi/"
-        files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-        with stream(
-            "POST",
-            url,
-            files=files,
-            timeout=120,
-        ) as response:
-            self.logger.debug(response)
-            if response.status_code == codes.OK:
-                return BytesIO(response.read())
-            else:
-                return None
+    async def shutdown(self):
+        led.req(LedPattern.SystemTurnOff)
 
-    async def load_buffer_file(self, path: PathLike):
-        with open(path, "rb") as bf:
-            return BytesIO(bf.read())
+    async def wait_for_network(self):
+        wait_for_wifi_enable_task = ct(wifi.wait_for_enable())
+        wait_for_connect_to_api_task = ct(api.wait_for_connect())
+        led.req(LedPattern.SystemSetup)
 
+        done, pending = await asyncio.wait(
+            (wait_for_wifi_enable_task, wait_for_connect_to_api_task),
+            return_when=asyncio.FIRST_COMPLETED,
+        )
 
-async def main() -> None:
-    system = System()
-    logger = get_logger("Main")
+        if wait_for_wifi_enable_task in done:
+            # led.req(wifi.strength()) # TODO
+            await wait_for_connect_to_api_task
 
-    if not SKIP_INTRODUCTION:
-        logger.info("Play welcome message.")
-        welcome_audio_file = await system.load_buffer_file(WELCOME_MESSAGE_PATH)
-        await play_sound(welcome_audio_file)
-
-    logger.info("Start loop.")
-
-    while True:
-        try:
-            await system.interface.button_left.wait_for_press()
-            await system.train_message()
-        except KeyboardInterrupt:
-            exit()
+        # if wait_for_connect_to_api_task is done
+        led.req(LedPattern.WifiHigh)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main = Main()
+    asyncio.run(main.main())

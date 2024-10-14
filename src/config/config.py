@@ -19,8 +19,7 @@ from argparse import (
 )
 import tomllib
 from os import getcwd, path
-
-from src.log.logger import get_logger
+from src.log.log import log
 
 FILE_NAME = "futarin.toml"
 
@@ -167,39 +166,55 @@ def get_multiple(*keys: str, **keys_with_default: Any) -> tuple:
     return tuple(result)
 
 
-logger = get_logger("Config")
+logger = log.get_logger("Config")
 
 config: Config = {}
 add_prop({"name": "api_origin", "type": str, "help": "Backend API origin"})
-add_prop({"name": "api_version", "type": str, "help": "Backend API version"})
+add_prop(
+    {
+        "name": "id",
+        "type": int,
+        "help": "futarin id",
+    }
+)
 add_prop(
     {
         "name": "led_server_origin",
         "type": str,
         "help": "futarin-led server origin",
-        "default": "http://0.0.0.0:8080",
+        "default": "http://127.0.0.1:8080",
     }
 )
 add_prop(
     {
-        "name": "input_audio_device_name",
+        "name": "mic_name",
         "type": str,
-        "help": "Input audio device(Microphone) name",
+        "help": "Microphone name",
+        "default": "BY Y02",
     }
 )
 add_prop(
     {
-        "name": "output_audio_device_name",
+        "name": "speaker_name",
         "type": str,
-        "help": "Output audio device(Speaker) name",
+        "help": "Speaker name",
+        "default": "BY Y02",
     }
 )
 add_prop(
     {
-        "name": "button_left_pin",
+        "name": "main_button_pin",
         "type": int,
-        "help": "Left button pin number",
+        "help": "Main button pin number",
         "default": 18,
+    }
+)
+add_prop(
+    {
+        "name": "sub_button_pin",
+        "type": int,
+        "help": "Sub button pin number",
+        "default": 24,
     }
 )
 add_prop(
@@ -243,9 +258,9 @@ for key, value in (config_from_file | config_from_args).items():
     if key in config:
         config[key]["value"] = value
     else:
-        raise KeyError(f"{key} is not found from config")
+        logger.warn(f"{key} is not found from config")
 
-logger.info("Initialized")
+logger.info("Initialized.")
 
 if __name__ == "__main__":
     print(f"{config_from_args=}")
