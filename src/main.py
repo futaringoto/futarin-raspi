@@ -59,13 +59,13 @@ class Main:
             )
 
             if wait_for_notification_task in done:
-                playing_welcome_message_thread.stop()
-                playing_welcome_message_thread.join()
                 self.logger.debug("Checked notification")
                 led.req(LedPattern.AudioReceive)
 
                 received_file = await api.get_message()
                 await button.wait_for_press_either()
+                playing_welcome_message_thread.stop()
+                playing_welcome_message_thread.join()
 
                 playing_receive_message_thread = speaker.play_local_vox(
                     LocalVox.ReceiveMessage

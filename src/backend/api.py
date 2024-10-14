@@ -107,8 +107,21 @@ class Api:
 
     async def get_message(self):
         endpoint = f"endpoints[Endpoint.Messages]/{self.message_id}"
-        received_file = await self.get(endpoint)
-        return received_file
+        url = f"{ORIGIN}{endpoint}"
+        for _ in range(RETRIES):
+            try:
+                with httpx.stream(
+                    "GET",
+                    url,
+                    timeout=120,
+                ) as response:
+                    if response.status_code == httpx.codes.OK:
+                        return BytesIO(response.read())
+                    else:
+                        continue
+            except httpx.HTTPError:
+                continue
+        return None
 
     ### Notification
     async def req_ws_url(self) -> bool:
