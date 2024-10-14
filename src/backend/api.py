@@ -88,6 +88,7 @@ class Api:
 
     async def ping(self) -> bool:
         status_code = await self.get(endpoints[Endpoint.Ping])
+        self.logger.debug(f"{status_code=}")
         return status_code == httpx.codes.OK
 
     async def normal(self, audio_file) -> Optional[BytesIO]:
