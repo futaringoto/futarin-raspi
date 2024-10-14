@@ -84,7 +84,7 @@ class RecordThread(threading.Thread):
             ):
                 self.logger.info(f"Found speaker. ({index=})")
                 return index
-        self.logger.info("Not found speaker.")
+        self.logger.error("Not found mic.")
         return None
 
     def stop(self):
