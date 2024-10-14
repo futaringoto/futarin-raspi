@@ -107,13 +107,13 @@ class PlayThread(threading.Thread):
         self.stop_req = True
 
 
-class speaker:
+class Speaker:
     def __init__(self):
-        self.logger = log.get_logger("speaker")
+        self.logger = log.get_logger("Speaker")
         self.device_name = config.get("speaker_name")
-        self.logger.info("initialized")
+        self.logger.info("Initialized")
 
-    def play_local_vox(self, local_vox: localvox) -> playthread:
+    def play_local_vox(self, local_vox: LocalVox) -> PlayThread:
         self.logger.info(f"play local vox. ({local_vox=})")
         path = local_vox_paths[local_vox]
         return self.play_by_path(path)
