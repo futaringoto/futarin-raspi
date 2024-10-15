@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 from pydub import AudioSegment
 from enum import Enum, auto
 
@@ -49,16 +50,13 @@ class Main:
             wait_for_sub_press_task = ct(button.wait_for_press_sub())
             wait_for_notification_task = ct(api.wait_for_notification())
 
-            done, _ = await asyncio.wait(
-                {
-                    wait_for_main_press_task,
-                    wait_for_sub_press_task,
-                    wait_for_notification_task,
-                },
-                return_when=asyncio.FIRST_COMPLETED,
+            done_task_index = wait_multi_tasks(
+                wait_for_main_press_task,
+                wait_for_sub_press_task,
+                wait_for_notification_task,
             )
 
-            if wait_for_notification_task in done:
+            if done_task_index == 2:
                 self.logger.debug("Checked notification")
                 led.req(LedPattern.AudioReceive)
 
@@ -163,15 +161,35 @@ class Main:
         wait_for_connect_to_api_task = ct(api.wait_for_connect())
         led.req(LedPattern.SystemSetup)
 
-        done, pending = await asyncio.wait(
-            (wait_for_wifi_enable_task, wait_for_connect_to_api_task),
-            return_when=asyncio.FIRST_COMPLETED,
+        done_task_index = await wait_multi_tasks(
+            wait_for_wifi_enable_task,
+            wait_for_connect_to_api_task,
         )
 
-        if wait_for_wifi_enable_task in done:
+        if done_task_index == 0:
             await wait_for_connect_to_api_task
 
         led.req(LedPattern.WifiHigh)
+
+
+async def wait_multi_tasks(
+    *tasks: asyncio.Task, return_when=asyncio.FIRST_COMPLETED
+) -> Optional[int]:
+    done, pending = await asyncio.wait(
+        tasks,
+        return_when=return_when,
+    )
+
+    done_task_index = None
+
+    for idx, task in enumerate(tasks):
+        if task in done:
+            done_task_index = idx
+
+    for pending_task in pending:
+        pending_task.cancel()
+
+    return done_task_index
 
 
 if __name__ == "__main__":
