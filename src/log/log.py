@@ -13,7 +13,7 @@ class Log:
     def __init__(self):
         self.loggers = []
         self.console_formatter = Formatter(
-            "%(asctime)s.%(msecs)03d %(levelname)s [%(name)s]: %(message)s",
+            "%(asctime)s.%(msecs)03d %(levelname)s [%(name)s] [%(filename)s:%(lineno)d %(funcName)s]: %(message)s",
             datefmt="%H:%M:%S",
         )
         self.file_formatter = FileFormatter()

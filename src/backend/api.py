@@ -40,28 +40,71 @@ class Api:
         self.notified = False
         self.message_id = None
 
-    async def get(self, endpoint: str, file=None, retries=5) -> Optional[int]:
+    # for ping, get message
+    async def get(
+        self, endpoint: str, file=None, except_file=False
+    ) -> Optional[httpx.Response]:
         url = f"{ORIGIN}{endpoint}"
-        if file:
-            self.logger.error("Not implemented.")
+        if except_file:
+            if file:
+                self.logger.error("Not implemented.")
+            for _ in range(RETRIES):
+                try:
+                    with httpx.stream(
+                        "GET",
+                        url,
+                        timeout=120,
+                    ) as response:
+                        self.logger.debug(f"{response.status_code=}")
+                        if response.status_code == httpx.codes.OK:
+                            self.logger.info(
+                                f"Connection successful. ({url=}, {response.status_code=})"
+                            )
+                            return response
+                        else:
+                            self.logger.warn(
+                                f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                            )
+                            continue
+                except httpx.HTTPError:
+                    self.logger.warn("HTTP error. Will be retry.")
+                    continue
+            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
         else:
-            for i in range(retries):
+            if file:
+                self.logger.error("Not implemented.")
+            for _ in range(RETRIES):
+                self.logger.info(f"Send GET HTTP Req. ({url=})")
                 async with httpx.AsyncClient() as client:
                     try:
-                        r = await client.get(url)
-                        return r.status_code
+                        response = await client.get(url)
+                        if response.status_code == httpx.codes.OK:
+                            self.logger.info(
+                                f"Connection successful. ({url=}, {response.status_code=})"
+                            )
+                            return response
+                        else:
+                            self.logger.warn(
+                                f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                            )
+                            continue
                     except httpx.HTTPError:
+                        self.logger.warn("HTTP error. Will be retry.")
                         continue
+            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
             return None
 
     async def post(
-        self, endpoint_enum: Endpoint, audio_file=None, retries=5
-    ) -> Optional[BytesIO] | Optional[httpx.codes]:
-        endpoint = endpoints[endpoint_enum]
+        self, endpoint: str, audio_file=None, except_file=False
+    ) -> Optional[httpx.Response]:
         url = f"{ORIGIN}{endpoint}"
-        if audio_file:
-            files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-            for _ in range(retries):
+        if except_file:
+            if audio_file:
+                files = {"file": ("record.wav", audio_file, "multipart/form-data")}
+            else:
+                files = None
+            for _ in range(RETRIES):
+                self.logger.info(f"Send POST HTTP Req. ({url=})")
                 try:
                     with httpx.stream(
                         "POST",
@@ -70,85 +113,112 @@ class Api:
                         timeout=120,
                     ) as response:
                         if response.status_code == httpx.codes.OK:
-                            return BytesIO(response.read())
+                            self.logger.info(
+                                f"Connection successful. ({url=}, {response.status_code=})"
+                            )
+                            return response
                         else:
+                            self.logger.warn(
+                                f"Response has error code. ({url=}, {response.status_code=})"
+                            )
                             continue
                 except httpx.HTTPError:
+                    self.logger.warn("HTTP error. Will be Retry.")
                     continue
+            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
             return None
         else:
             self.logger.error("Not implemented.")
 
     async def wait_for_connect(self):
         self.logger.info("Try to connect API")
+        led.req(LedPattern.SystemSetup)
         while True:
-            success = await self.ping()
-            self.logger.debug(f"{success=}")
-            if success:
-                self.logger.info("Wifi connected.")
-                break
-            await asyncio.sleep(PING_INTERVAL)
+            is_success = await self.ping()
+            if is_success:
+                self.logger.info("Connected to API server.")
+                led.req(LedPattern.WifiHigh)
+                return
+            else:
+                self.logger.info("Failed to connect API server.")
+                await asyncio.sleep(PING_INTERVAL)
 
     async def ping(self) -> bool:
-        status_code = await self.get(endpoints[Endpoint.Ping])
-        self.logger.debug(f"{status_code=}")
-        return status_code == httpx.codes.OK
+        response = await self.get(endpoints[Endpoint.Ping])
+        if response:
+            self.logger.info("Ping success.")
+            return True
+        else:
+            self.logger.info("Ping fail.")
+            return False
 
     async def normal(self, audio_file) -> Optional[BytesIO]:
         led.req(LedPattern.AudioThinking)
-        response_file = await self.post(Endpoint.Normal, audio_file=audio_file)
-        led.req(LedPattern.AudioResSuccess)
-        return response_file
+        endpoint = endpoints[Endpoint.Normal]
+        response = await self.post(endpoint, audio_file=audio_file, except_file=True)
+        if response:
+            response_file = BytesIO(response.read())
+            led.req(LedPattern.AudioResSuccess)
+            return response_file
+        else:
+            led.req(LedPattern.AudioResFail)
+            return None
 
-    async def messages(self, audio_file) -> Optional[BytesIO]:
+    async def messages(self, audio_file) -> bool:
+        self.logger.info("Start Api.messages()")
         led.req(LedPattern.AudioUploading)
-        response_file = await self.post(Endpoint.Messages, audio_file=audio_file)
-        led.req(LedPattern.AudioResSuccess)
-        return response_file
+        endpoint = endpoints[Endpoint.Messages]
+        response = await self.post(endpoint, audio_file=audio_file)
+        if response:
+            self.logger.info("Post message asuccess.")
+            led.req(LedPattern.AudioResSuccess)
+            return True
+        else:
+            self.logger.info("Post message fail.")
+            led.req(LedPattern.AudioResFail)
+            return False
 
-    async def get_message(self):
+    async def req_get_message(self) -> bool:
         endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"
-        url = f"{ORIGIN}{endpoint}"
-        self.logger.debug(f"{url=}")
-        for _ in range(RETRIES):
-            try:
-                with httpx.stream(
-                    "GET",
-                    url,
-                    timeout=120,
-                ) as response:
-                    self.logger.debug(f"{response.status_code=}")
-                    if response.status_code == httpx.codes.OK:
-                        return BytesIO(response.read())
-                    else:
-                        continue
-            except httpx.HTTPError:
-                self.logger.debug("fail")
-                continue
-        return None
+        response = await self.get(endpoint, except_file=True)
+        if response:
+            self.message_file = BytesIO(response.read())
+            self.logger.error("Success to get message.")
+            return True
+        else:
+            self.logger.error("Fail to get message.")
+            return False
+
+    async def get_message(self) -> Optional[BytesIO]:
+        if not self.message_file:
+            response = await self.req_get_message()
+            if not response:
+                return None
+        message_file = self.message_file
+        self.notified = False
+        self.message_file = None
+        return message_file
 
     ### Notification
-    async def req_ws_url(self) -> bool:
+    async def req_ws_url(self):
         endpoint = endpoints[Endpoint.WsNegotiate]
-        url = f"{ORIGIN}{endpoint}"
-        async with httpx.AsyncClient() as client:
-            try:
-                r = await client.post(url)
-                if r.status_code == httpx.codes.OK:
-                    self.ws_url = r.json()["url"]
-                    return True
-                else:
-                    return False
-            except httpx.HTTPError as e:
-                self.logger.error(e)
-                return False
+        response = await self.get(endpoint)
+        while True:
+            if response:
+                self.ws_url = response.json()["url"]
+                return
+            else:
+                continue
 
     async def wait_for_notification(self):
         self.logger.debug("Wait for notification.")
         while not self.notified:
             await asyncio.sleep(SENSOR_INTERVAL)
+        await self.req_get_message()
 
     async def start_listening_notification(self):
+        if not self.ws_url:
+            await self.req_ws_url()
         self.ws_task = asyncio.create_task(self.run_websockets())
 
     async def run_websockets(self):

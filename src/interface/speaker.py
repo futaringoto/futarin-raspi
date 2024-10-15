@@ -19,7 +19,7 @@ CHUNK = 1024 * 4
 class LocalVox(Enum):
     Welcome = auto()
     Shutdown = auto()
-    WhatHappen = auto()
+    WhatUp = auto()
     KeepPressing = auto()
     ResFail = auto()
     MessagesMode = auto()
@@ -31,7 +31,7 @@ class LocalVox(Enum):
 local_vox_paths: Dict[LocalVox, str | PathLike] = {
     LocalVox.Welcome: "assets/vox/welcome.wav",
     LocalVox.Shutdown: "assets/vox/shutdown.wav",  # TODO
-    LocalVox.WhatHappen: "assets/vox/whathappen.wav",
+    LocalVox.WhatUp: "assets/vox/whatup.wav",
     LocalVox.KeepPressing: "assets/vox/fail.wav",  # TODO
     LocalVox.ResFail: "assets/vox/fail.wav",
     LocalVox.MessagesMode: "assets/vox/message_mode.wav",

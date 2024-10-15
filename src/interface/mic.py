@@ -14,21 +14,6 @@ CHANNELS = 2
 RATE = 44100
 
 
-class Mic:
-    def __init__(self):
-        self.logger = log.get_logger("Mic")
-        self.device_name = config.get("mic_name")
-        self.logger.info("Initialized.")
-
-    def record(self) -> threading.Thread:
-        thread = RecordThread(self.device_name)
-        thread.start()
-        return thread
-
-
-mic = Mic()
-
-
 class RecordThread(threading.Thread):
     def __init__(
         self,
@@ -93,3 +78,18 @@ class RecordThread(threading.Thread):
 
     def get_recorded_file(self):
         return self.buffer
+
+
+class Mic:
+    def __init__(self):
+        self.logger = log.get_logger("Mic")
+        self.device_name = config.get("mic_name")
+        self.logger.info("Initialized.")
+
+    def record(self) -> RecordThread:
+        thread = RecordThread(self.device_name)
+        thread.start()
+        return thread
+
+
+mic = Mic()
