@@ -79,11 +79,7 @@ class Main:
                 playing_welcome_message_thread.stop()
                 playing_welcome_message_thread.join()
 
-                pressed_button = (
-                    ButtonEnum.Main
-                    if wait_for_main_press_task in done
-                    else ButtonEnum.Sub
-                )
+                pressed_button = ButtonEnum.Main if wait_for_main_press_task == 0 else k
 
                 self.logger.debug(f"{pressed_button} was pressed.")
 
