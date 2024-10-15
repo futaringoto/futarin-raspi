@@ -50,7 +50,7 @@ class Main:
             wait_for_sub_press_task = ct(button.wait_for_press_sub())
             wait_for_notification_task = ct(api.wait_for_notification())
 
-            done_task_index = wait_multi_tasks(
+            done_task_index = await wait_multi_tasks(
                 wait_for_main_press_task,
                 wait_for_sub_press_task,
                 wait_for_notification_task,
