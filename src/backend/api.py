@@ -1,4 +1,5 @@
 import src.config.config as config
+import json
 from src.interface.led import led, LedPattern
 from io import BytesIO
 from src.log.log import log
@@ -155,13 +156,20 @@ class Api:
             try:
                 async with connect(self.ws_url) as ws:
                     self.logger.info("WebSockets connected.")
-                    await ws.send(f'{{"action": "register", "clientId": {ID}}}')
 
                     while True:
                         self.logger.info("Listening notification.")
-                        self.message_id = await ws.recv()
-                        self.notified = True
-                        self.logger.info("Notified.")
+                        json_str = await ws.recv()
+                        try:
+                            json_obj = json.loads(json_str)
+                            if json_obj["type"] == "message":
+                                self.message_id = int(json_obj["id"])
+                                self.notified = True
+                                self.logger.info("Message notified.")
+                            else:
+                                self.logger.info(f"Other data notified.{json_str}")
+                        except (json.JSONDecodeError, KeyError):
+                            self.logger.error("Failed decoding received notification")
 
             except websockets.exceptions:
                 self.logger.info("WebSockets connection closed by the server.")
