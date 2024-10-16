@@ -23,30 +23,30 @@ class RecordThread(threading.Thread):
     ):
         super().__init__(name=name, daemon=True)
         self.device_name = device_name
+        self.py_audio = PyAudio()
         self.logger = logger
         self.stop_req = False
         self.logger.info("Initialized.")
-
-    def run(self):
-        self.logger.info("Run.")
-        py_audio = PyAudio()
         buffer = BytesIO()
         buffer.name = "record.wav"
 
+    def run(self):
+        self.logger.info("Run.")
+
         led.req(LedPattern.AudioRecording)
 
-        with wave.open(buffer, "wb") as wf:
+        with wave.open(self.buffer, "wb") as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(get_sample_size(FORMAT))
             wf.setframerate(RATE)
 
             self.logger.info("Start recording.")
-            stream = py_audio.open(
+            stream = self.py_audio.open(
                 format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
-                input_device_index=self.get_device_index(py_audio),
+                input_device_index=self.get_device_index(self.py_audio),
             )
             while True:
                 if self.stop_req:
@@ -56,18 +56,18 @@ class RecordThread(threading.Thread):
                     wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
 
             stream.close()
-            py_audio.terminate()
+            self.py_audio.terminate()
 
         self.logger.info("Finalize record.")
-        buffer.seek(0)
-        self.buffer = buffer
+        self.buffer.seek(0)
+        self.buffer = self.buffer
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
         for index in range(py_audio.get_device_count()):
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]
             ):
-                self.logger.info(f"Found speaker. ({index=})")
+                self.logger.info(f"Found mic. ({index=})")
                 return index
         self.logger.error("Not found mic.")
         return None
@@ -86,9 +86,10 @@ class Mic:
         self.device_name = config.get("mic_name")
         self.logger.info("Initialized.")
 
-    def record(self) -> RecordThread:
+    def record(self, auto_start=True) -> RecordThread:
         thread = RecordThread(self.device_name)
-        thread.start()
+        if auto_start:
+            thread.start()
         return thread
 
 

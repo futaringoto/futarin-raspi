@@ -134,10 +134,10 @@ class Main:
 
     async def normal(self):
         self.logger.info("Start message mode")
-        speaker.play_local_vox(LocalVox.WhatUp).join()
+        what_up_thread = speaker.play_local_vox(LocalVox.WhatUp)
+        record_thread = recoard_thread = mic.record(auto_start=False)
 
         self.logger.info("Record voice.")
-        recoard_thread = mic.record()
         await button.wait_for_release_main()
         recoard_thread.stop()
         recoard_thread.join()
