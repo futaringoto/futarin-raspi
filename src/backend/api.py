@@ -35,20 +35,18 @@ endpoints = {
 
 class Response:
     def __init__(self, response):
+        self.logger = log.get_logger("Response")
         try:
             self.json = response.json()
         except json.JSONDecodeError:
             self.json = None
+            self.logger.warn("Failed to get json from response.")
 
         try:
             self.file = BytesIO(response.content)
         except httpx.ResponseNotRead:
             self.file = None
-            try:
-                self.json = response.json()
-            except json.JSONDecodeError:
-                self.json = None
-                self.logger.warn("Failed to get json from response.")
+            self.logger.warn("Failed to file json from response.")
 
 
 class Api:
@@ -136,7 +134,7 @@ class Api:
     async def normal(self, audio_file) -> Optional[BytesIO]:
         led.req(LedPattern.AudioThinking)
         endpoint = endpoints[Endpoint.Normal]
-        response = await self.post(endpoint, audio_file=audio_file, except_file=True)
+        response = await self.post(endpoint, audio_file=audio_file)
         if response is not None:
             response_file = response.file
             led.req(LedPattern.AudioResSuccess)
@@ -161,7 +159,7 @@ class Api:
 
     async def req_get_message(self) -> bool:
         endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"
-        response = await self.get(endpoint, except_file=True)
+        response = await self.get(endpoint)
         if response is not None:
             self.message_file = response.file
             self.logger.error("Success to get message.")
@@ -187,7 +185,7 @@ class Api:
         response = await self.post(endpoint)
         while True:
             try:
-                if response is None:
+                if response is None or response.json is None:
                     continue
                 else:
                     self.ws_url = response.json["url"]
