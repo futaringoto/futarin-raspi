@@ -4,7 +4,7 @@ Description=The communication support tool
 [Service]
 Type=simple
 WorkingDirectory=/opt/futarin/futarin-raspi
-ExecStart=/home/futarin/.cargo/bin/uv run /opt/futarin/futarin-raspi/src/main.py
+ExecStart=/opt/futarin/uv/bin/uv run /opt/futarin/futarin-raspi/src/main.py
 User=futarin
 Restart=on-failure
 
