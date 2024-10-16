@@ -82,17 +82,29 @@ class PlayThread(threading.Thread):
 
             self.logger.info("Start playing sound.")
 
+            self.logger.info("A")
             while len(data := wf.readframes(CHUNK)):
+                self.logger.info(f"B, {data=}")
                 if not self.stop_req:
+                    self.logger.info("C")
                     stream.write(data)
+                    self.logger.info("D")
                 else:
+                    self.logger.info("E")
                     self.logger.info("Stop playing sound.")
+                    self.logger.info("F")
                     break
+
+            self.logger.info("G")
             stream.close()
+            self.logger.info("H")
             p.terminate()
+            self.logger.info("I")
             self.logger.info("Finish playing sound.")
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
+        for index in range(py_audio.get_device_count()):
+            self.logger.debug(f"{index=}, {py_audio.get_device_info_by_index(index)}")
         for index in range(py_audio.get_device_count()):
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]
