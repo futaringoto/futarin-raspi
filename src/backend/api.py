@@ -1,13 +1,13 @@
 import src.config.config as config
+import json
 from src.interface.led import led, LedPattern
 from io import BytesIO
 from src.log.log import log
-import threading
 import httpx
 import asyncio
-from typing import Optional
-from websockets.sync.client import connect
+from websockets.asyncio.client import connect
 import websockets
+from typing import Literal, Optional
 from enum import Enum, auto
 
 PING_INTERVAL = 10
@@ -15,6 +15,8 @@ ORIGIN = config.get("api_origin")
 VERSION = 2
 ID = config.get("id")
 RETRIES = 4
+SENSOR_INTERVAL = 0.1
+TIMEOUT = 120
 
 
 class Endpoint(Enum):
@@ -32,157 +34,199 @@ endpoints = {
 }
 
 
+class Response:
+    def __init__(self, response):
+        self.logger = log.get_logger("Response")
+        try:
+            self.json = response.json()
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.json = None
+            self.logger.warn("Failed to get json from response.")
+
+        try:
+            self.file = BytesIO(response.content)
+        except httpx.ResponseNotRead:
+            self.file = None
+            self.logger.warn("Failed to file json from response.")
+
+
 class Api:
     def __init__(self):
         self.logger = log.get_logger("Api")
         self.logger.info("Initialized.")
+        self.notified = False
+        self.message_id = None
+        self.ws_rul = None
 
-    async def get(self, endpoint_enum: Endpoint, file=None, retries=5) -> Optional[int]:
-        endpoint = endpoints[endpoint_enum]
+    # for ping, get message
+    async def get(self, endpoint: str) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
-        if file:
-            self.logger.error("Not implemented.")
-        else:
-            for i in range(retries):
+        for _ in range(RETRIES):
+            self.logger.info(f"Send GET HTTP Req. ({url=})")
+            try:
                 async with httpx.AsyncClient() as client:
-                    try:
-                        r = await client.get(url)
-                        return r.status_code
-                    except httpx.HTTPError:
+                    response = await client.get(url, timeout=TIMEOUT)
+                    if response.status_code == httpx.codes.OK:
+                        self.logger.info(
+                            f"Connection successful. ({url=}, {response.status_code=})"
+                        )
+                        return Response(response)
+                    else:
+                        self.logger.warn(
+                            f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                        )
                         continue
-            return None
+            except httpx.HTTPError:
+                self.logger.warn("HTTP error. Will be retry.")
+                continue
+        self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
+        return None
 
-    async def post(
-        self, endpoint_enum: Endpoint, audio_file=None, retries=5
-    ) -> Optional[BytesIO] | Optional[httpx.codes]:
-        endpoint = endpoints[endpoint_enum]
+    async def post(self, endpoint: str, audio_file=None) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
         if audio_file:
             files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-            for _ in range(retries):
-                try:
-                    with httpx.stream(
-                        "POST",
-                        url,
-                        files=files,
-                        timeout=120,
-                    ) as response:
-                        if response.status_code == httpx.codes.OK:
-                            return BytesIO(response.read())
-                        else:
-                            continue
-                except httpx.HTTPError:
-                    continue
-            return None
         else:
-            self.logger.error("Not implemented.")
+            files = None
+
+        for _ in range(RETRIES):
+            self.logger.info(f"Send GET HTTP Req. ({url=})")
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(url, files=files, timeout=TIMEOUT)
+                    if response.status_code == httpx.codes.OK:
+                        self.logger.info(
+                            f"Connection successful. ({url=}, {response.status_code=})"
+                        )
+                        return Response(response)
+                    else:
+                        self.logger.warn(
+                            f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                        )
+                        continue
+            except httpx.HTTPError:
+                self.logger.warn("HTTP error. Will be retry.")
+                continue
+        self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
+        return None
+
+    async def wait_for_connect(self) -> Literal[True]:
+        self.logger.info("Try to connect API")
+        led.req(LedPattern.SystemSetup)
+        while True:
+            is_success = await self.ping()
+            if is_success:
+                self.logger.info("Connected to API server.")
+                led.req(LedPattern.WifiHigh)
+                return True
+            else:
+                self.logger.info("Failed to connect API server. Retry.")
+                await asyncio.sleep(PING_INTERVAL)
 
     async def ping(self) -> bool:
-        status_code = await self.get(Endpoint.Ping)
-        return status_code == httpx.codes.OK
+        response = await self.get(endpoints[Endpoint.Ping])
+        if response is not None:
+            self.logger.info("Ping success.")
+            return True
+        else:
+            self.logger.info("Ping fail.")
+            return False
 
     async def normal(self, audio_file) -> Optional[BytesIO]:
         led.req(LedPattern.AudioThinking)
-        response_file = await self.post(Endpoint.Normal, audio_file=audio_file)
-        led.req(LedPattern.AudioResSuccess)
-        return response_file
+        endpoint = endpoints[Endpoint.Normal]
+        response = await self.post(endpoint, audio_file=audio_file)
+        if response is not None:
+            response_file = response.file
+            led.req(LedPattern.AudioResSuccess)
+            return response_file
+        else:
+            led.req(LedPattern.AudioResFail)
+            return None
 
-    async def messages(self, audio_file) -> Optional[BytesIO]:
+    async def messages(self, audio_file) -> bool:
+        self.logger.info("Start Api.messages()")
         led.req(LedPattern.AudioUploading)
-        response_file = await self.post(Endpoint.Messages, audio_file=audio_file)
-        led.req(LedPattern.AudioResSuccess)
-        return response_file
+        endpoint = endpoints[Endpoint.Messages]
+        response = await self.post(endpoint, audio_file=audio_file)
+        if response is None:
+            self.logger.info("Post message fail.")
+            led.req(LedPattern.AudioResFail)
+            return False
+        else:
+            self.logger.info("Post message asuccess.")
+            led.req(LedPattern.AudioResSuccess)
+            return True
 
-    # Wait for ping success
-    async def wait_for_connect(self):
-        self.logger.info("Try to connect API")
-        while True:
-            success = await self.ping()
-            if success:
-                break
-            await asyncio.sleep(PING_INTERVAL)
-
-    async def get_message(self, message_id):
-        endpoint = f"endpoints[Endpoint.Messages]/{message_id}"
-        url = f"{ORIGIN}{endpoint}"
-        try:
-            with httpx.stream(
-                "GET",
-                url,
-                timeout=120,
-            ) as response:
-                self.logger.debug(vars(response))
-                if response.status_code == httpx.codes.OK:
-                    return BytesIO(response.read())
-                else:
-                    return None
-        except httpx.HTTPError:
+    async def req_get_message(self) -> bool:
+        endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"
+        response = await self.get(endpoint)
+        if response is not None:
+            self.message_file = response.file
+            self.logger.error("Success to get message.")
+            return True
+        else:
+            self.logger.error("Fail to get message.")
             return False
 
-    async def req_ws_url(self) -> bool:
+    async def get_message(self) -> Optional[BytesIO]:
+        if not self.message_file:
+            response = await self.req_get_message()
+            if response is None:
+                return None
+        message_file = self.message_file
+        self.notified = False
+        self.message_file = None
+        return message_file
+
+    ### Notification
+    async def init_notification_connection(self) -> Literal[True]:
+        self.logger.info("Get WebSocket url.")
         endpoint = endpoints[Endpoint.WsNegotiate]
-        url = f"{ORIGIN}{endpoint}"
-        async with httpx.AsyncClient() as client:
+        response = await self.post(endpoint)
+        while True:
             try:
-                r = await client.post(url)
-                if r.status_code == httpx.codes.OK:
-                    self.ws_url = r.json()["url"]
-                    return True
+                if response is None or response.json is None:
+                    continue
                 else:
-                    return False
-            except httpx.HTTPError as e:
-                self.logger.error(e)
-                return False
+                    self.ws_url = response.json["url"]
+                    return True
+            except KeyError:
+                self.logger.error("Key('url') not found")
+                continue
 
     async def wait_for_notification(self):
-        message_id = None
-        try:
-            async with websockets.connect(self.ws_url) as ws:
-                self.logger.info("WebSockets connected.")
-                await ws.send(f'{{"action": "register", "clientId": {ID}}}')
+        self.logger.debug("Wait for notification.")
+        while not self.notified:
+            await asyncio.sleep(SENSOR_INTERVAL)
+        await self.req_get_message()
 
-                print(await ws.recv())
+    async def start_listening_notifications(self):
+        await self.init_notification_connection()
+        self.ws_task = asyncio.create_task(self.run_websockets())
 
-                self.logger.debug(message_id)
+    async def run_websockets(self):
+        while True:
+            try:
+                async with connect(self.ws_url) as ws:
+                    self.logger.info("WebSockets connected.")
 
-        except websockets.exceptions.ConnectionClosedOK:
-            self.logger.info("WebSockets connection closed by the server")
+                    while True:
+                        self.logger.info("Listening notification.")
+                        json_str = await ws.recv()
+                        try:
+                            json_obj = json.loads(json_str)
+                            if json_obj["type"] == "message":
+                                self.message_id = int(json_obj["id"])
+                                self.notified = True
+                                self.logger.info("Message notified.")
+                            else:
+                                self.logger.info(f"Other data notified.{json_str}")
+                        except (json.JSONDecodeError, KeyError):
+                            self.logger.error("Failed decoding received notification")
 
-    ## not using
-    async def start_ws(self):
-        self.ws_thread = self.websocket_for_thread(self.ws_url)
-        self.ws_thread.start()
-
-    ## not using
-    async def get_notification(self):
-        return self.ws_thread.get_notification()
-
-    ## not using
-    class websocket_for_thread(threading.Thread):
-        def __init__(self, ws_url, name="WebsocketThread"):
-            super().__init__(name=name)
-            self.is_notified = False
-            self.ws_url = ws_url
-            self.logger = log.get_logger("WebsocketThread")
-
-        def run(self):
-            while True:
-                try:
-                    with connect(self.ws_url) as ws:
-                        self.logger.info("Connected.")
-                        ws.send(f'{{"action": "register", "clientId": {ID}}}')
-                        while True:
-                            ws.recv()
-                            self.is_notified = True
-                except websockets.exceptions.ConnectionClosedOK:
-                    self.logger.info("Connection closed by the server")
-
-        def get_notification(self) -> bool:
-            if self.is_notified:
-                self.is_notified = False
-                return True
-            else:
-                return False
+            except websockets.exceptions.ConnectionClosed:
+                self.logger.info("WebSockets connection closed by the server.")
 
 
 api = Api()
