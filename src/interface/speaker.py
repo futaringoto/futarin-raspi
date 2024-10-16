@@ -31,7 +31,7 @@ class LocalVox(Enum):
 local_vox_paths: Dict[LocalVox, str | PathLike] = {
     LocalVox.Welcome: "assets/vox/welcome.wav",
     LocalVox.Shutdown: "assets/vox/shutdown.wav",  # TODO
-    LocalVox.WhatUp: "assets/vox/whatup.wav",
+    LocalVox.WhatUp: "assets/vox/whatup_trim.wav",
     LocalVox.KeepPressing: "assets/vox/fail.wav",  # TODO
     LocalVox.Fail: "assets/vox/fail.wav",
     LocalVox.MessagesMode: "assets/vox/message_mode.wav",
