@@ -34,16 +34,22 @@ endpoints = {
 
 
 class Response:
-    def __init__(self, response):
-        try:
-            self.json = response.json()
-        except json.JSONDecodeError:
+    def __init__(self, response, stream=False):
+        self.logger = log.get_logger("Response")
+        if stream:
+            self.json = None
+            try:
+                self.file = BytesIO(response.read())
+            except httpx.ResponseNotRead:
+                self.file = None
+                self.logger.warn("Failed to get file from response.")
+        else:
             self.file = None
-
-        try:
-            self.file = BytesIO(response.read())
-        except httpx.ResponseNotRead:
-            self.file = None
+            try:
+                self.json = response.json()
+            except json.JSONDecodeError:
+                self.json = None
+                self.logger.warn("Failed to get json from response.")
 
 
 class Api:
@@ -73,7 +79,7 @@ class Api:
                             self.logger.info(
                                 f"Connection successful. ({url=}, {response.status_code=})"
                             )
-                            return Response(response)
+                            return Response(response, stream=True)
                         else:
                             self.logger.warn(
                                 f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
@@ -129,7 +135,7 @@ class Api:
                             self.logger.info(
                                 f"Connection successful. ({url=}, {response.status_code=})"
                             )
-                            return Response(response)
+                            return Response(response, stream=True)
                         else:
                             self.logger.warn(
                                 f"Response has error code. ({url=}, {response.status_code=})"
