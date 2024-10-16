@@ -27,39 +27,46 @@ class RecordThread(threading.Thread):
         self.logger = logger
         self.stop_req = False
         self.logger.info("Initialized.")
+
         self.buffer = BytesIO()
         self.buffer.name = "record.wav"
+
         self.mic_index = self.get_device_index(self.py_audio)
+
+        self.wf = wave.open(self.buffer, "wb")
+        self.wf.setnchannels(CHANNELS)
+        self.wf.setsampwidth(get_sample_size(FORMAT))
+        self.wf.setframerate(RATE)
+
+        self.stream = self.py_audio.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            input=True,
+            input_device_index=self.mic_index,
+        )
 
     def run(self):
         self.logger.info("Run.")
 
         led.req(LedPattern.AudioRecording)
 
-        with wave.open(self.buffer, "wb") as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(get_sample_size(FORMAT))
-            wf.setframerate(RATE)
+        self.logger.info("Start recording.")
+        while True:
+            if self.stop_req:
+                self.logger.info("Stop recording.")
+                break
+            else:
+                self.wf.writeframes(
+                    self.stream.read(CHUNK, exception_on_overflow=False)
+                )
 
-            self.logger.info("Start recording.")
-            stream = self.py_audio.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                input_device_index=self.mic_index,
-            )
-            while True:
-                if self.stop_req:
-                    self.logger.info("Stop recording.")
-                    break
-                else:
-                    wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
-
-            stream.close()
-            self.py_audio.terminate()
+        self.stream.close()
+        self.py_audio.terminate()
 
         self.logger.info("Finalize record.")
+        self.wf.close()
+        self.stream.close()
         self.buffer.seek(0)
         self.buffer = self.buffer
 
