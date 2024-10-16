@@ -27,6 +27,9 @@ class RecordThread(threading.Thread):
         self.stop_req = False
         self.logger.info("Initialized.")
 
+    def run(self):
+        self.logger.info("Run.")
+
         self.buffer = BytesIO()
         self.buffer.name = "record.wav"
 
@@ -44,10 +47,6 @@ class RecordThread(threading.Thread):
             input=True,
             input_device_index=self.mic_index,
         )
-
-    def run(self):
-        self.logger.info("Run.")
-
         self.logger.info("Start recording.")
         while True:
             if self.stop_req:
