@@ -45,8 +45,6 @@ class Response:
         except httpx.ResponseNotRead:
             self.file = None
 
-        print(self.file, self.json)
-
 
 class Api:
     def __init__(self):
