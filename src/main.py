@@ -56,7 +56,7 @@ class Main:
                 wait_for_notification_task,
             )
 
-            if welcome_message_thread.alive():  # type: ignore
+            if welcome_message_thread.is_alive():
                 self.logger.info("Stop welcome message.")
                 welcome_message_thread.stop()
                 welcome_message_thread.join()
