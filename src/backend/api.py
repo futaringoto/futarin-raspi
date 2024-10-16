@@ -112,12 +112,10 @@ class Api:
 
     async def wait_for_connect(self) -> Literal[True]:
         self.logger.info("Try to connect API")
-        led.req(LedPattern.SystemSetup)
         while True:
             is_success = await self.ping()
             if is_success:
                 self.logger.info("Connected to API server.")
-                led.req(LedPattern.WifiHigh)
                 return True
             else:
                 self.logger.info("Failed to connect API server. Retry.")
@@ -202,8 +200,13 @@ class Api:
         await self.req_get_message()
 
     async def start_listening_notifications(self):
+        self.logger.info("Establish a WebSocket connection.")
         await self.init_notification_connection()
         self.ws_task = asyncio.create_task(self.run_websockets())
+
+    async def stop_listening_notifications(self):
+        self.logger.info("Close WebSocket connection.")
+        self.ws_task.cancel()
 
     async def run_websockets(self):
         while True:
@@ -226,7 +229,10 @@ class Api:
                             self.logger.error("Failed decoding received notification")
 
             except websockets.exceptions.ConnectionClosed:
-                self.logger.info("WebSockets connection closed by the server.")
+                self.logger.info("WebSocket connection closed by the server.")
+            except asyncio.CancelledError:
+                self.logger.info("Close WebSocket connection by myself.")
+                break
 
 
 api = Api()

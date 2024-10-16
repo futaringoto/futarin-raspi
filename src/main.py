@@ -29,41 +29,40 @@ class Main:
 
     async def main(self):
         self.logger.info("Start Main.main")
-        await api.wait_for_connect()
+        await self.setup()
         await self.main_loop()
         await self.shutdown()
+
+    async def setup(self):
+        led.req(LedPattern.SystemSetup)
+        await api.wait_for_connect()
+
+        await api.start_listening_notifications()
 
     async def main_loop(self):
         self.logger.info("Start Main.main_loop")
         welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
-        self.logger.info("Establihs a WebSockets connection.")
-        await api.start_listening_notifications()
-
         while True:
             self.logger.info("Start loop.")
+            led.req(LedPattern.WifiHigh)
 
-            self.logger.info(
-                "Wait for button to press or receiving notification on WebSockets."
-            )
-            wait_for_main_press_task = ct(button.wait_for_press_main())
-            wait_for_sub_press_task = ct(button.wait_for_press_sub())
-            wait_for_notification_task = ct(api.wait_for_notification())
-
+            self.logger.info("Wait for button to press or notifing.")
             done_task_index = await self.wait_multi_tasks(
-                wait_for_main_press_task,
-                wait_for_sub_press_task,
-                wait_for_notification_task,
+                ct(api.wait_for_notification()),
+                ct(button.wait_for_hold_main()),
+                ct(button.wait_for_press_sub()),
             )
 
+            # Try to stop welcome message
             if welcome_message_thread.is_alive():
                 self.logger.info("Stop welcome message.")
                 welcome_message_thread.stop()
                 welcome_message_thread.join()
 
-            # if wairt_for_notification_task finished first
-            if done_task_index == 2:
-                self.logger.debug("Checked notification")
+            # if notified
+            if done_task_index == 0:
+                self.logger.debug("Notified.")
                 message_file = await api.get_message()
 
                 if message_file:
@@ -81,12 +80,13 @@ class Main:
                 else:
                     self.logger.error("Failed to get message_file.")
 
+            # if pressed button
             else:
                 pressed_button = (
                     ButtonEnum.Main if done_task_index == 0 else ButtonEnum.Sub
                 )
 
-                self.logger.debug(f"{pressed_button} was pressed.")
+                self.logger.info(f"{pressed_button} was pressed.")
 
                 if pressed_button == ButtonEnum.Main:
                     if self.mode == Mode.Normal:
@@ -96,10 +96,19 @@ class Main:
                         self.logger.debug("Call message mode.")
                         await self.message()
                 else:
-                    self.logger.debug("Switch mode.")
-                    await self.switch_mode()
+                    # observer sub button
+                    done_task_index = await self.wait_multi_tasks(
+                        ct(button.wait_for_release_sub()),
+                        ct(button.wait_for_hold_sub()),
+                    )
+                    if done_task_index == 0:
+                        await self.toggle_mode()
+                    else:
+                        self.logger.debug("Exit main_loop.")
+                        return
 
-    async def switch_mode(self):
+    async def toggle_mode(self):
+        self.logger.info("Toggle mode.")
         if self.mode == Mode.Normal:
             self.logger.info("Switch to message mode.")
             self.mode = Mode.Message
@@ -168,7 +177,10 @@ class Main:
             return None
 
     async def shutdown(self):
+        self.logger.info("Shutdown.")
         led.req(LedPattern.SystemTurnOff)
+        await api.stop_listening_notifications()
+        led.req(LedPattern.SystemOff)
 
     async def wait_multi_tasks(
         self, *tasks: asyncio.Task, return_when=asyncio.FIRST_COMPLETED
