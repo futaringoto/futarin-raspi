@@ -77,22 +77,21 @@ class PlayThread(threading.Thread):
                 channels=wf.getnchannels(),
                 rate=wf.getframerate(),
                 output=True,
+                input=False,
                 output_device_index=self.get_device_index(p),
             )
 
             self.logger.info("Start playing sound.")
 
-            self.logger.info("A")
+            self.logger.debug("A")
             while len(data := wf.readframes(CHUNK)):
-                self.logger.info(f"B, {data=}")
+                self.logger.debug("B")
                 if not self.stop_req:
-                    self.logger.info("C")
+                    self.logger.debug("C")
                     stream.write(data)
-                    self.logger.info("D")
+                    self.logger.debug("D")
                 else:
-                    self.logger.info("E")
                     self.logger.info("Stop playing sound.")
-                    self.logger.info("F")
                     break
 
             self.logger.info("G")
