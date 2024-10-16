@@ -135,18 +135,20 @@ class Main:
         playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatUp)
         playing_what_happen_thread.join()
 
+        # record
         recoard_thread = mic.record()
         await button.wait_for_release_main()
         recoard_thread.stop()
         recoard_thread.join()
+
         file = recoard_thread.get_recorded_file()
         audio_seconds = self.get_audio_seconds(file)
         if audio_seconds is None:
             speaker.play_local_vox(LocalVox.Fail)
         else:
             if audio_seconds < 1:
-                speaker.play_local_vox(LocalVox.KeepPressing)
-            return
+                speaker.play_local_vox(LocalVox.Fail)
+                return
         while True:
             received_file = await api.normal(file)
             if received_file:
@@ -159,6 +161,7 @@ class Main:
             audio = AudioSegment.from_file(audio_file, "wav")
             return audio.duration_seconds
         except PydubException:
+            self.logger.error("Failed to convert recorded audio to AudioSegment.")
             return None
 
     async def shutdown(self):
