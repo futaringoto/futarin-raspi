@@ -16,6 +16,7 @@ VERSION = 2
 ID = config.get("id")
 RETRIES = 4
 SENSOR_INTERVAL = 0.1
+TIMEOUT = 120
 
 
 class Endpoint(Enum):
@@ -64,7 +65,7 @@ class Api:
             self.logger.info(f"Send GET HTTP Req. ({url=})")
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(url)
+                    response = await client.get(url, timeout=TIMEOUT)
                     if response.status_code == httpx.codes.OK:
                         self.logger.info(
                             f"Connection successful. ({url=}, {response.status_code=})"
@@ -92,7 +93,7 @@ class Api:
             self.logger.info(f"Send GET HTTP Req. ({url=})")
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.post(url, files=files)
+                    response = await client.post(url, files=files, timeout=TIMEOUT)
                     if response.status_code == httpx.codes.OK:
                         self.logger.info(
                             f"Connection successful. ({url=}, {response.status_code=})"
