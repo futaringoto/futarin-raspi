@@ -35,14 +35,13 @@ endpoints = {
 
 class Response:
     def __init__(self, response):
-        print(type(response))
         try:
             self.json = response.json()
         except json.JSONDecodeError:
-            self.file = None
+            self.json = None
 
         try:
-            self.file = BytesIO(response.read())
+            self.file = BytesIO(response.content)
         except httpx.ResponseNotRead:
             self.file = None
 
@@ -56,115 +55,56 @@ class Api:
         self.ws_rul = None
 
     # for ping, get message
-    async def get(
-        self, endpoint: str, audio_file=None, except_file=False
-    ) -> Optional[Response]:
+    async def get(self, endpoint: str) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
-        if except_file:
-            if audio_file:
-                self.logger.error("Not implemented.")
-            for _ in range(RETRIES):
-                try:
-                    with httpx.stream(
-                        "GET",
-                        url,
-                        timeout=120,
-                    ) as response:
-                        self.logger.debug(f"{response.status_code=}")
-                        if response.status_code == httpx.codes.OK:
-                            self.logger.info(
-                                f"Connection successful. ({url=}, {response.status_code=})"
-                            )
-                            return Response(response)
-                        else:
-                            self.logger.warn(
-                                f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
-                            )
-                            continue
-                except httpx.HTTPError:
-                    self.logger.warn("HTTP error. Will be retry.")
-                    continue
-            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
-        else:
-            if audio_file:
-                self.logger.error("Not implemented.")
-            for _ in range(RETRIES):
-                self.logger.info(f"Send GET HTTP Req. ({url=})")
+        for _ in range(RETRIES):
+            self.logger.info(f"Send GET HTTP Req. ({url=})")
+            try:
                 async with httpx.AsyncClient() as client:
-                    try:
-                        response = await client.get(url)
-                        if response.status_code == httpx.codes.OK:
-                            self.logger.info(
-                                f"Connection successful. ({url=}, {response.status_code=})"
-                            )
-                            return Response(response)
-                        else:
-                            self.logger.warn(
-                                f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
-                            )
-                            continue
-                    except httpx.HTTPError:
-                        self.logger.warn("HTTP error. Will be retry.")
+                    response = await client.get(url)
+                    if response.status_code == httpx.codes.OK:
+                        self.logger.info(
+                            f"Connection successful. ({url=}, {response.status_code=})"
+                        )
+                        return Response(response)
+                    else:
+                        self.logger.warn(
+                            f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                        )
                         continue
-            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
-            return None
+            except httpx.HTTPError:
+                self.logger.warn("HTTP error. Will be retry.")
+                continue
+        self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
+        return None
 
-    async def post(
-        self, endpoint: str, audio_file=None, except_file=False
-    ) -> Optional[Response]:
+    async def post(self, endpoint: str, audio_file=None) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
-        if except_file:
-            if audio_file:
-                files = {"file": ("record.wav", audio_file, "multipart/form-data")}
-            else:
-                files = None
-            for _ in range(RETRIES):
-                self.logger.info(f"Send POST HTTP Req. ({url=})")
-                try:
-                    with httpx.stream(
-                        "POST",
-                        url,
-                        files=files,
-                        timeout=120,
-                    ) as response:
-                        if response.status_code == httpx.codes.OK:
-                            self.logger.info(
-                                f"Connection successful. ({url=}, {response.status_code=})"
-                            )
-                            return Response(response)
-                        else:
-                            self.logger.warn(
-                                f"Response has error code. ({url=}, {response.status_code=})"
-                            )
-                            continue
-                except httpx.HTTPError:
-                    self.logger.warn("HTTP error. Will be Retry.")
-                    continue
-            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
-            return None
+        if audio_file:
+            files = {"file": ("record.wav", audio_file, "multipart/form-data")}
         else:
-            if audio_file:
-                self.logger.error("Not implemented.")
-            for _ in range(RETRIES):
-                self.logger.info(f"Send GET HTTP Req. ({url=})")
+            files = None
+
+        for _ in range(RETRIES):
+            self.logger.info(f"Send GET HTTP Req. ({url=})")
+            try:
                 async with httpx.AsyncClient() as client:
-                    try:
-                        response = await client.post(url)
-                        if response.status_code == httpx.codes.OK:
-                            self.logger.info(
-                                f"Connection successful. ({url=}, {response.status_code=})"
-                            )
-                            return Response(response)
-                        else:
-                            self.logger.warn(
-                                f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
-                            )
-                            continue
-                    except httpx.HTTPError:
-                        self.logger.warn("HTTP error. Will be retry.")
+                    response = await client.post(url, files=files)
+                    if response.status_code == httpx.codes.OK:
+                        self.logger.info(
+                            f"Connection successful. ({url=}, {response.status_code=})"
+                        )
+                        return Response(response)
+                    else:
+                        self.logger.warn(
+                            f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                        )
                         continue
-            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
-            return None
+            except httpx.HTTPError:
+                self.logger.warn("HTTP error. Will be retry.")
+                continue
+        self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
+        return None
 
     async def wait_for_connect(self) -> Literal[True]:
         self.logger.info("Try to connect API")
@@ -205,14 +145,14 @@ class Api:
         led.req(LedPattern.AudioUploading)
         endpoint = endpoints[Endpoint.Messages]
         response = await self.post(endpoint, audio_file=audio_file)
-        if response is not None:
-            self.logger.info("Post message asuccess.")
-            led.req(LedPattern.AudioResSuccess)
-            return True
-        else:
+        if response is None:
             self.logger.info("Post message fail.")
             led.req(LedPattern.AudioResFail)
             return False
+        else:
+            self.logger.info("Post message asuccess.")
+            led.req(LedPattern.AudioResSuccess)
+            return True
 
     async def req_get_message(self) -> bool:
         endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"
