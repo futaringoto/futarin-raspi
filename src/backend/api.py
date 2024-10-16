@@ -161,7 +161,7 @@ class Api:
         response = await self.get(endpoint)
         if response is not None:
             self.message_file = response.file
-            self.logger.error("Success to get message.")
+            self.logger.info("Success to get message.")
             return True
         else:
             self.logger.error("Fail to get message.")
@@ -193,13 +193,13 @@ class Api:
                 self.logger.error("Key('url') not found")
                 continue
 
-    async def wait_for_notification(self):
+    async def wait_for_notifing(self):
         self.logger.debug("Wait for notification.")
         while not self.notified:
             await asyncio.sleep(SENSOR_INTERVAL)
         await self.req_get_message()
 
-    async def start_listening_notifications(self):
+    async def start_websocket_connection(self):
         self.logger.info("Establish a WebSocket connection.")
         await self.init_notification_connection()
         self.ws_task = asyncio.create_task(self.run_websockets())
