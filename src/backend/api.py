@@ -39,7 +39,7 @@ class Response:
         self.logger = log.get_logger("Response")
         try:
             self.json = response.json()
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             self.json = None
             self.logger.warn("Failed to get json from response.")
 
