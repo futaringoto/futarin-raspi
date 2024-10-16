@@ -138,6 +138,7 @@ class Main:
         record_thread = recoard_thread = mic.record(auto_start=False)
 
         what_up_thread.join()
+        record_thread.start()
         await button.wait_for_release_main()
         record_thread.stop()
         record_thread.join()
