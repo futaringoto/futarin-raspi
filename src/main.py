@@ -137,10 +137,10 @@ class Main:
         what_up_thread = speaker.play_local_vox(LocalVox.WhatUp)
         record_thread = recoard_thread = mic.record(auto_start=False)
 
-        self.logger.info("Record voice.")
+        what_up_thread.join()
         await button.wait_for_release_main()
-        recoard_thread.stop()
-        recoard_thread.join()
+        record_thread.stop()
+        record_thread.join()
 
         self.logger.info("Check recorded file.")
         file = recoard_thread.get_recorded_file()
