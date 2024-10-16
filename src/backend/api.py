@@ -133,29 +133,29 @@ class Api:
             return False
 
     async def normal(self, audio_file) -> Optional[BytesIO]:
-        led.req(LedPattern.AudioThinking)
+        led.req(LedPattern.ApiProcessing)
         endpoint = endpoints[Endpoint.Normal]
         response = await self.post(endpoint, audio_file=audio_file)
         if response is not None:
             response_file = response.file
-            led.req(LedPattern.AudioResSuccess)
+            led.req(LedPattern.ApiSuccess)
             return response_file
         else:
-            led.req(LedPattern.AudioResFail)
+            led.req(LedPattern.ApiFail)
             return None
 
     async def messages(self, audio_file) -> bool:
         self.logger.info("Start Api.messages()")
-        led.req(LedPattern.AudioUploading)
+        led.req(LedPattern.ApiPostingMessage)
         endpoint = endpoints[Endpoint.Messages]
         response = await self.post(endpoint, audio_file=audio_file)
         if response is None:
             self.logger.info("Post message fail.")
-            led.req(LedPattern.AudioResFail)
+            led.req(LedPattern.ApiFail)
             return False
         else:
-            self.logger.info("Post message asuccess.")
-            led.req(LedPattern.AudioResSuccess)
+            self.logger.info("Post message success.")
+            led.req(LedPattern.ApiSuccess)
             return True
 
     async def req_get_message(self) -> bool:

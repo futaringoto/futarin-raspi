@@ -21,12 +21,13 @@ class LedPattern(Enum):
     WifiMiddle = auto()
     WifiLow = auto()
     WifiDisconnect = auto()
-    AudioListening = auto()
-    AudioThinking = auto()
-    AudioResSuccess = auto()
-    AudioResFail = auto()
-    AudioUploading = auto()
-    AudioReceive = auto()
+    AudioRecording = auto()
+    AudioPlaying = auto()
+    ApiProcessing = auto()
+    ApiSuccess = auto()
+    ApiFail = auto()
+    ApiPostingMessage = auto()
+    Notifing = auto()
 
 
 led_endpoints = {
@@ -38,12 +39,13 @@ led_endpoints = {
     LedPattern.WifiMiddle: "/wifi/middle",
     LedPattern.WifiLow: "/wifi/low",
     LedPattern.WifiDisconnect: "/wifi/disconnect",
-    LedPattern.AudioListening: "/audio/listening",
-    LedPattern.AudioThinking: "/audio/thinking",
-    LedPattern.AudioResSuccess: "/audio/res-success",
-    LedPattern.AudioResFail: "/audio/res-fail",
-    LedPattern.AudioUploading: "/audio/uploading",
-    LedPattern.AudioReceive: "/audio/receive",
+    LedPattern.AudioRecording: "/audio/listening",
+    LedPattern.AudioPlaying: "/audio/res-success",  # same as ApiSuccess
+    LedPattern.ApiProcessing: "/audio/thinking",
+    LedPattern.ApiSuccess: "/audio/res-success",
+    LedPattern.ApiFail: "/audio/res-fail",
+    LedPattern.ApiPostingMessage: "/audio/uploading",
+    LedPattern.Notifing: "/audio/receive",
 }
 
 

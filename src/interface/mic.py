@@ -33,7 +33,7 @@ class RecordThread(threading.Thread):
         buffer = BytesIO()
         buffer.name = "record.wav"
 
-        led.req(LedPattern.AudioListening)
+        led.req(LedPattern.AudioRecording)
 
         with wave.open(buffer, "wb") as wf:
             wf.setnchannels(CHANNELS)

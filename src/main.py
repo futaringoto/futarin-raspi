@@ -64,7 +64,6 @@ class Main:
             # if wairt_for_notification_task finished first
             if done_task_index == 2:
                 self.logger.debug("Checked notification")
-                led.req(LedPattern.AudioReceive)
                 message_file = await api.get_message()
 
                 if message_file:
@@ -76,8 +75,9 @@ class Main:
                     )
                     playing_receive_message_thread.join()
 
-                    led.req(LedPattern.AudioResSuccess)
-                    speaker.play(message_file)
+                    led.req(LedPattern.AudioPlaying)
+                    speaker.play(message_file).join()
+
                 else:
                     self.logger.error("Failed to get message_file.")
 
