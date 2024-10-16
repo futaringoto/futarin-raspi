@@ -50,12 +50,10 @@ class RecordThread(threading.Thread):
 
         self.logger.info("Start recording.")
         while True:
-            self.logger.debug(0)
             if self.stop_req:
                 self.logger.info("Stop recording.")
                 break
             else:
-                self.logger.debug(1)
                 self.wf.writeframes(
                     self.stream.read(CHUNK, exception_on_overflow=False)
                 )
