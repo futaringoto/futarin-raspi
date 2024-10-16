@@ -233,7 +233,7 @@ class Api:
         response = await self.post(endpoint)
         while True:
             if response:
-                self.ws_url = response.json()["url"]
+                self.ws_url = response.json["url"]
                 return
             else:
                 continue
