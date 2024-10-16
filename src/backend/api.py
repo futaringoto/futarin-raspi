@@ -44,6 +44,11 @@ class Response:
             self.file = BytesIO(response.content)
         except httpx.ResponseNotRead:
             self.file = None
+            try:
+                self.json = response.json()
+            except json.JSONDecodeError:
+                self.json = None
+                self.logger.warn("Failed to get json from response.")
 
 
 class Api:
