@@ -35,8 +35,13 @@ endpoints = {
 
 class Response:
     def __init__(self, response):
+        try:
+            self.json = response.json()
+        except json.JSONDecodeError:
+            self.file = None
+
         self.file = BytesIO(response.read())
-        self.json = response.json()
+
         print(self.file, self.json)
 
 
