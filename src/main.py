@@ -66,6 +66,7 @@ class Main:
 
                 if message_file is not None:
                     self.logger.info("Success to get message_file.")
+                    led.req(LedPattern.Notifing)
                     await button.wait_for_press_main()
 
                     speaker.play_local_vox(LocalVox.ReceiveMessage).join()
