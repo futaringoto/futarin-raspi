@@ -80,14 +80,15 @@ class Main:
                 else:
                     self.logger.error("Failed to get message_file.")
 
-            # if pressed button
+            # if button pressed
             else:
                 pressed_button = (
-                    ButtonEnum.Main if done_task_index == 0 else ButtonEnum.Sub
+                    ButtonEnum.Main if done_task_index == 1 else ButtonEnum.Sub
                 )
 
                 self.logger.info(f"{pressed_button} was pressed.")
 
+                # if main button pressed
                 if pressed_button == ButtonEnum.Main:
                     if self.mode == Mode.Normal:
                         self.logger.debug("Call normal mode.")
@@ -95,6 +96,7 @@ class Main:
                     else:
                         self.logger.debug("Call message mode.")
                         await self.message()
+                # if sub button pressed
                 else:
                     # observer sub button
                     done_task_index = await self.wait_multi_tasks(

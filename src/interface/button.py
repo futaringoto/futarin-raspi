@@ -54,7 +54,7 @@ class Button:
 
     async def wait_for_hold_main(self):
         self.logger.debug("Wait main button to hold.")
-        while self.main.is_held:
+        while not self.main.is_held:
             await asyncio.sleep(SENSOR_INTERVAL)
 
     async def wait_for_press_sub(self):
