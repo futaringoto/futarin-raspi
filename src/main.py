@@ -180,9 +180,9 @@ class Main:
 
     async def shutdown(self):
         self.logger.info("Shutdown.")
-        led.req(LedPattern.SystemTurnOff)
-        await api.stop_listening_notifications()
         led.req(LedPattern.SystemOff)
+        await api.stop_listening_notifications()
+        led.req(LedPattern.SystemTurnOff)
 
     async def wait_multi_tasks(
         self, *tasks: asyncio.Task, return_when=asyncio.FIRST_COMPLETED
