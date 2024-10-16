@@ -275,7 +275,7 @@ class Api:
                         except (json.JSONDecodeError, KeyError):
                             self.logger.error("Failed decoding received notification")
 
-            except websockets.exceptions:
+            except websockets.exceptions.ConnectionClosed:
                 self.logger.info("WebSockets connection closed by the server.")
 
 
