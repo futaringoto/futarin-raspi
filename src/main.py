@@ -135,26 +135,29 @@ class Main:
         playing_what_happen_thread = speaker.play_local_vox(LocalVox.WhatUp)
         playing_what_happen_thread.join()
 
-        # record
+        self.logger.info("Record voice.")
         recoard_thread = mic.record()
         await button.wait_for_release_main()
         recoard_thread.stop()
         recoard_thread.join()
 
+        self.logger.info("Check recorded file.")
         file = recoard_thread.get_recorded_file()
         audio_seconds = self.get_audio_seconds(file)
-        if audio_seconds is None:
-            speaker.play_local_vox(LocalVox.Fail)
+        if audio_seconds is None or audio_seconds < 1:
+            self.logger.info("Inviled recorded file.")
+            speaker_thread = speaker.play_local_vox(LocalVox.Fail)
+            speaker_thread.join()
+            return
+
+        self.logger.info("Call api.normal")
+        received_file = await api.normal(file)
+        if received_file is None:
+            speaker_thread = speaker.play_local_vox(LocalVox.Fail)
+            speaker_thread.join()
         else:
-            if audio_seconds < 1:
-                speaker.play_local_vox(LocalVox.Fail)
-                return
-        while True:
-            received_file = await api.normal(file)
-            if received_file:
-                thread = speaker.play(received_file)
-                thread.join()
-                break
+            speaker_thread = speaker.play(received_file)
+            speaker_thread.join()
 
     def get_audio_seconds(self, audio_file) -> Optional[int]:
         try:
