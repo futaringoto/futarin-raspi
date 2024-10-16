@@ -112,12 +112,10 @@ class Api:
 
     async def wait_for_connect(self) -> Literal[True]:
         self.logger.info("Try to connect API")
-        led.req(LedPattern.SystemSetup)
         while True:
             is_success = await self.ping()
             if is_success:
                 self.logger.info("Connected to API server.")
-                led.req(LedPattern.WifiHigh)
                 return True
             else:
                 self.logger.info("Failed to connect API server. Retry.")
@@ -133,29 +131,29 @@ class Api:
             return False
 
     async def normal(self, audio_file) -> Optional[BytesIO]:
-        led.req(LedPattern.AudioThinking)
+        led.req(LedPattern.ApiProcessing)
         endpoint = endpoints[Endpoint.Normal]
         response = await self.post(endpoint, audio_file=audio_file)
         if response is not None:
             response_file = response.file
-            led.req(LedPattern.AudioResSuccess)
+            led.req(LedPattern.ApiSuccess)
             return response_file
         else:
-            led.req(LedPattern.AudioResFail)
+            led.req(LedPattern.ApiFail)
             return None
 
     async def messages(self, audio_file) -> bool:
         self.logger.info("Start Api.messages()")
-        led.req(LedPattern.AudioUploading)
+        led.req(LedPattern.ApiPostingMessage)
         endpoint = endpoints[Endpoint.Messages]
         response = await self.post(endpoint, audio_file=audio_file)
         if response is None:
             self.logger.info("Post message fail.")
-            led.req(LedPattern.AudioResFail)
+            led.req(LedPattern.ApiFail)
             return False
         else:
-            self.logger.info("Post message asuccess.")
-            led.req(LedPattern.AudioResSuccess)
+            self.logger.info("Post message success.")
+            led.req(LedPattern.ApiSuccess)
             return True
 
     async def req_get_message(self) -> bool:
@@ -202,8 +200,13 @@ class Api:
         await self.req_get_message()
 
     async def start_listening_notifications(self):
+        self.logger.info("Establish a WebSocket connection.")
         await self.init_notification_connection()
         self.ws_task = asyncio.create_task(self.run_websockets())
+
+    async def stop_listening_notifications(self):
+        self.logger.info("Close WebSocket connection.")
+        self.ws_task.cancel()
 
     async def run_websockets(self):
         while True:
@@ -226,7 +229,10 @@ class Api:
                             self.logger.error("Failed decoding received notification")
 
             except websockets.exceptions.ConnectionClosed:
-                self.logger.info("WebSockets connection closed by the server.")
+                self.logger.info("WebSocket connection closed by the server.")
+            except asyncio.CancelledError:
+                self.logger.info("Close WebSocket connection by myself.")
+                break
 
 
 api = Api()

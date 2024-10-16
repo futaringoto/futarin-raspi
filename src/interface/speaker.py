@@ -49,7 +49,7 @@ class PlayThread(threading.Thread):
         logger=log.get_logger("SpeakerPlayThread"),
         name="Speaker-Play",
     ):
-        super().__init__(name=name)
+        super().__init__(name=name, daemon=True)
         self.file = file
         self.device_name = device_name
         self.logger = logger

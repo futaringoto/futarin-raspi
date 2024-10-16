@@ -21,7 +21,7 @@ class RecordThread(threading.Thread):
         logger=log.get_logger("MicRecordThread"),
         name="Mic-Record",
     ):
-        super().__init__(name=name)
+        super().__init__(name=name, daemon=True)
         self.device_name = device_name
         self.logger = logger
         self.stop_req = False
@@ -33,7 +33,7 @@ class RecordThread(threading.Thread):
         buffer = BytesIO()
         buffer.name = "record.wav"
 
-        led.req(LedPattern.AudioListening)
+        led.req(LedPattern.AudioRecording)
 
         with wave.open(buffer, "wb") as wf:
             wf.setnchannels(CHANNELS)
