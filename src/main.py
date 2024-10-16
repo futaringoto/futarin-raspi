@@ -35,12 +35,10 @@ class Main:
 
     async def main_loop(self):
         self.logger.info("Start Main.main_loop")
-        self.logger.info("Play welcome message")
         welcome_message_thread = speaker.play_local_vox(LocalVox.Welcome)
 
         self.logger.info("Establihs a WebSockets connection.")
-        await api.req_ws_url()
-        await api.start_listening_notification()
+        await api.start_listening_notifications()
 
         while True:
             self.logger.info("Start loop.")
@@ -125,10 +123,12 @@ class Main:
         recoard_thread.stop()
         recoard_thread.join()
         file = recoard_thread.get_recorded_file()
-        await api.messages(file)
-
-        playing_what_happen_thread = speaker.play_local_vox(LocalVox.SendMessage)
-        playing_what_happen_thread.join()
+        if await api.messages(file):
+            what_happen_thread = speaker.play_local_vox(LocalVox.SendMessage)
+            what_happen_thread.join()
+        else:
+            what_happen_thread = speaker.play_local_vox(LocalVox.Fail)
+            what_happen_thread.join()
 
     async def normal(self):
         self.logger.info("Start message mode")

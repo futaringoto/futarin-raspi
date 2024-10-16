@@ -7,7 +7,7 @@ import httpx
 import asyncio
 from websockets.asyncio.client import connect
 import websockets
-from typing import Optional
+from typing import Literal, Optional
 from enum import Enum, auto
 
 PING_INTERVAL = 10
@@ -35,6 +35,7 @@ endpoints = {
 
 class Response:
     def __init__(self, response):
+        print(type(response))
         try:
             self.json = response.json()
         except json.JSONDecodeError:
@@ -52,6 +53,7 @@ class Api:
         self.logger.info("Initialized.")
         self.notified = False
         self.message_id = None
+        self.ws_rul = None
 
     # for ping, get message
     async def get(
@@ -164,7 +166,7 @@ class Api:
             self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
             return None
 
-    async def wait_for_connect(self):
+    async def wait_for_connect(self) -> Literal[True]:
         self.logger.info("Try to connect API")
         led.req(LedPattern.SystemSetup)
         while True:
@@ -172,7 +174,7 @@ class Api:
             if is_success:
                 self.logger.info("Connected to API server.")
                 led.req(LedPattern.WifiHigh)
-                return
+                return True
             else:
                 self.logger.info("Failed to connect API server. Retry.")
                 await asyncio.sleep(PING_INTERVAL)
@@ -234,14 +236,19 @@ class Api:
         return message_file
 
     ### Notification
-    async def req_ws_url(self):
+    async def init_notification_connection(self) -> Literal[True]:
+        self.logger.info("Get WebSocket url.")
         endpoint = endpoints[Endpoint.WsNegotiate]
         response = await self.post(endpoint)
         while True:
-            if response:
-                self.ws_url = response.json["url"]
-                return
-            else:
+            try:
+                if response is None:
+                    continue
+                else:
+                    self.ws_url = response.json["url"]
+                    return True
+            except KeyError:
+                self.logger.error("Key('url') not found")
                 continue
 
     async def wait_for_notification(self):
@@ -250,9 +257,8 @@ class Api:
             await asyncio.sleep(SENSOR_INTERVAL)
         await self.req_get_message()
 
-    async def start_listening_notification(self):
-        if not self.ws_url:
-            await self.req_ws_url()
+    async def start_listening_notifications(self):
+        await self.init_notification_connection()
         self.ws_task = asyncio.create_task(self.run_websockets())
 
     async def run_websockets(self):
