@@ -40,7 +40,10 @@ class Response:
         except json.JSONDecodeError:
             self.file = None
 
-        self.file = BytesIO(response.read())
+        try:
+            self.file = BytesIO(response.read())
+        except httpx.ResponseNotRead:
+            self.file = None
 
         print(self.file, self.json)
 
