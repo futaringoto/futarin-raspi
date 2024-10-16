@@ -42,11 +42,11 @@ class Api:
 
     # for ping, get message
     async def get(
-        self, endpoint: str, file=None, except_file=False
+        self, endpoint: str, audio_file=None, except_file=False
     ) -> Optional[httpx.Response]:
         url = f"{ORIGIN}{endpoint}"
         if except_file:
-            if file:
+            if audio_file:
                 self.logger.error("Not implemented.")
             for _ in range(RETRIES):
                 try:
@@ -71,7 +71,7 @@ class Api:
                     continue
             self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
         else:
-            if file:
+            if audio_file:
                 self.logger.error("Not implemented.")
             for _ in range(RETRIES):
                 self.logger.info(f"Send GET HTTP Req. ({url=})")
@@ -128,7 +128,28 @@ class Api:
             self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
             return None
         else:
-            self.logger.error("Not implemented.")
+            if audio_file:
+                self.logger.error("Not implemented.")
+            for _ in range(RETRIES):
+                self.logger.info(f"Send GET HTTP Req. ({url=})")
+                async with httpx.AsyncClient() as client:
+                    try:
+                        response = await client.post(url)
+                        if response.status_code == httpx.codes.OK:
+                            self.logger.info(
+                                f"Connection successful. ({url=}, {response.status_code=})"
+                            )
+                            return response
+                        else:
+                            self.logger.warn(
+                                f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
+                            )
+                            continue
+                    except httpx.HTTPError:
+                        self.logger.warn("HTTP error. Will be retry.")
+                        continue
+            self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
+            return None
 
     async def wait_for_connect(self):
         self.logger.info("Try to connect API")
