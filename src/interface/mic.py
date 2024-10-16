@@ -27,7 +27,7 @@ class RecordThread(threading.Thread):
         self.logger = logger
         self.stop_req = False
         self.logger.info("Initialized.")
-        buffer = BytesIO()
+        self.buffer = BytesIO()
         buffer.name = "record.wav"
 
     def run(self):
