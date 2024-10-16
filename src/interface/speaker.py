@@ -21,11 +21,11 @@ class LocalVox(Enum):
     Shutdown = auto()
     WhatUp = auto()
     KeepPressing = auto()
-    ResFail = auto()
     MessagesMode = auto()
     NormalMode = auto()
     SendMessage = auto()
     ReceiveMessage = auto()
+    Fail = auto()
 
 
 local_vox_paths: Dict[LocalVox, str | PathLike] = {
@@ -33,7 +33,7 @@ local_vox_paths: Dict[LocalVox, str | PathLike] = {
     LocalVox.Shutdown: "assets/vox/shutdown.wav",  # TODO
     LocalVox.WhatUp: "assets/vox/whatup.wav",
     LocalVox.KeepPressing: "assets/vox/fail.wav",  # TODO
-    LocalVox.ResFail: "assets/vox/fail.wav",
+    LocalVox.Fail: "assets/vox/fail.wav",
     LocalVox.MessagesMode: "assets/vox/message_mode.wav",
     LocalVox.NormalMode: "assets/vox/normal.wav",
     LocalVox.SendMessage: "assets/vox/send_message.wav",

@@ -1,7 +1,9 @@
 import asyncio
 from typing import Optional
 from pydub import AudioSegment
+from pydub.exceptions import PydubException
 from enum import Enum, auto
+
 
 from src.log.log import log
 from src.interface.mic import mic
@@ -50,7 +52,7 @@ class Main:
             wait_for_sub_press_task = ct(button.wait_for_press_sub())
             wait_for_notification_task = ct(api.wait_for_notification())
 
-            done_task_index = await wait_multi_tasks(
+            done_task_index = await self.wait_multi_tasks(
                 wait_for_main_press_task,
                 wait_for_sub_press_task,
                 wait_for_notification_task,
@@ -138,8 +140,12 @@ class Main:
         recoard_thread.stop()
         recoard_thread.join()
         file = recoard_thread.get_recorded_file()
-        if not await self.check_recorded_file(file):
-            speaker.play_local_vox(LocalVox.KeepPressing)
+        audio_seconds = self.get_audio_seconds(file)
+        if audio_seconds is None:
+            speaker.play_local_vox(LocalVox.Fail)
+        else:
+            if audio_seconds < 1:
+                speaker.play_local_vox(LocalVox.KeepPressing)
             return
         while True:
             received_file = await api.normal(file)
@@ -148,34 +154,34 @@ class Main:
                 thread.join()
                 break
 
-    async def check_recorded_file(self, audio_file) -> bool:
-        audio = AudioSegment.from_file(audio_file, "wav")
-        if audio.duration_seconds < 1:
-            return False
-        return True
+    def get_audio_seconds(self, audio_file) -> Optional[int]:
+        try:
+            audio = AudioSegment.from_file(audio_file, "wav")
+            return audio.duration_seconds
+        except PydubException:
+            return None
 
     async def shutdown(self):
         led.req(LedPattern.SystemTurnOff)
 
+    async def wait_multi_tasks(
+        self, *tasks: asyncio.Task, return_when=asyncio.FIRST_COMPLETED
+    ) -> Optional[int]:
+        done, pending = await asyncio.wait(
+            tasks,
+            return_when=return_when,
+        )
 
-async def wait_multi_tasks(
-    *tasks: asyncio.Task, return_when=asyncio.FIRST_COMPLETED
-) -> Optional[int]:
-    done, pending = await asyncio.wait(
-        tasks,
-        return_when=return_when,
-    )
+        done_task_index = None
 
-    done_task_index = None
+        for idx, task in enumerate(tasks):
+            if task in done:
+                done_task_index = idx
 
-    for idx, task in enumerate(tasks):
-        if task in done:
-            done_task_index = idx
+        for pending_task in pending:
+            pending_task.cancel()
 
-    for pending_task in pending:
-        pending_task.cancel()
-
-    return done_task_index
+        return done_task_index
 
 
 if __name__ == "__main__":

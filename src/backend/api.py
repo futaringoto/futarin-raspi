@@ -33,6 +33,13 @@ endpoints = {
 }
 
 
+class Response:
+    def __init__(self, response):
+        self.file = BytesIO(response.read())
+        self.json = response.json()
+        print(self.file, self.json)
+
+
 class Api:
     def __init__(self):
         self.logger = log.get_logger("Api")
@@ -43,7 +50,7 @@ class Api:
     # for ping, get message
     async def get(
         self, endpoint: str, audio_file=None, except_file=False
-    ) -> Optional[httpx.Response]:
+    ) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
         if except_file:
             if audio_file:
@@ -60,7 +67,7 @@ class Api:
                             self.logger.info(
                                 f"Connection successful. ({url=}, {response.status_code=})"
                             )
-                            return response
+                            return Response(response)
                         else:
                             self.logger.warn(
                                 f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
@@ -82,7 +89,7 @@ class Api:
                             self.logger.info(
                                 f"Connection successful. ({url=}, {response.status_code=})"
                             )
-                            return response
+                            return Response(response)
                         else:
                             self.logger.warn(
                                 f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
@@ -96,7 +103,7 @@ class Api:
 
     async def post(
         self, endpoint: str, audio_file=None, except_file=False
-    ) -> Optional[httpx.Response]:
+    ) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
         if except_file:
             if audio_file:
@@ -116,7 +123,7 @@ class Api:
                             self.logger.info(
                                 f"Connection successful. ({url=}, {response.status_code=})"
                             )
-                            return response
+                            return Response(response)
                         else:
                             self.logger.warn(
                                 f"Response has error code. ({url=}, {response.status_code=})"
@@ -139,7 +146,7 @@ class Api:
                             self.logger.info(
                                 f"Connection successful. ({url=}, {response.status_code=})"
                             )
-                            return response
+                            return Response(response)
                         else:
                             self.logger.warn(
                                 f"Response has error code. Will be retry. ({url=}, {response.status_code=})"
@@ -161,12 +168,12 @@ class Api:
                 led.req(LedPattern.WifiHigh)
                 return
             else:
-                self.logger.info("Failed to connect API server.")
+                self.logger.info("Failed to connect API server. Retry.")
                 await asyncio.sleep(PING_INTERVAL)
 
     async def ping(self) -> bool:
         response = await self.get(endpoints[Endpoint.Ping])
-        if response:
+        if response is not None:
             self.logger.info("Ping success.")
             return True
         else:
@@ -177,8 +184,8 @@ class Api:
         led.req(LedPattern.AudioThinking)
         endpoint = endpoints[Endpoint.Normal]
         response = await self.post(endpoint, audio_file=audio_file, except_file=True)
-        if response:
-            response_file = BytesIO(response.read())
+        if response is not None:
+            response_file = response.file
             led.req(LedPattern.AudioResSuccess)
             return response_file
         else:
@@ -190,7 +197,7 @@ class Api:
         led.req(LedPattern.AudioUploading)
         endpoint = endpoints[Endpoint.Messages]
         response = await self.post(endpoint, audio_file=audio_file)
-        if response:
+        if response is not None:
             self.logger.info("Post message asuccess.")
             led.req(LedPattern.AudioResSuccess)
             return True
@@ -202,8 +209,8 @@ class Api:
     async def req_get_message(self) -> bool:
         endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"
         response = await self.get(endpoint, except_file=True)
-        if response:
-            self.message_file = BytesIO(response.read())
+        if response is not None:
+            self.message_file = response.file
             self.logger.error("Success to get message.")
             return True
         else:
@@ -213,7 +220,7 @@ class Api:
     async def get_message(self) -> Optional[BytesIO]:
         if not self.message_file:
             response = await self.req_get_message()
-            if not response:
+            if response is None:
                 return None
         message_file = self.message_file
         self.notified = False
