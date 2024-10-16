@@ -33,7 +33,7 @@ class LedPattern(Enum):
 led_endpoints = {
     LedPattern.SystemOn: "/system/on",
     LedPattern.SystemSetup: "/system/setup",
-    LedPattern.SystemOff: "/system/off",
+    LedPattern.SystemOff: "/system/setup",  # TODO: fix futarin-led
     LedPattern.SystemTurnOff: "/system/turn_off",
     LedPattern.WifiHigh: "/wifi/high",
     LedPattern.WifiMiddle: "/wifi/middle",
