@@ -29,6 +29,7 @@ class RecordThread(threading.Thread):
         self.logger.info("Initialized.")
         self.buffer = BytesIO()
         self.buffer.name = "record.wav"
+        self.mic_index = self.get_device_index(self.py_audio)
 
     def run(self):
         self.logger.info("Run.")
@@ -46,7 +47,7 @@ class RecordThread(threading.Thread):
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
-                input_device_index=self.get_device_index(self.py_audio),
+                input_device_index=self.mic_index,
             )
             while True:
                 if self.stop_req:
