@@ -202,7 +202,7 @@ class Api:
     ### Notification
     async def req_ws_url(self):
         endpoint = endpoints[Endpoint.WsNegotiate]
-        response = await self.get(endpoint)
+        response = await self.post(endpoint)
         while True:
             if response:
                 self.ws_url = response.json()["url"]
