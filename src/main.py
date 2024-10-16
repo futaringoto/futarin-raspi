@@ -123,6 +123,7 @@ class Main:
 
         self.logger.info("Record message to send.")
         recoard_thread = mic.record()
+        led.req(LedPattern.AudioRecording)
         await button.wait_for_release_main()
         recoard_thread.stop()
         recoard_thread.join()

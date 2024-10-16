@@ -1,5 +1,4 @@
 from pyaudio import PyAudio, get_sample_size, paInt16
-from src.interface.led import led, LedPattern
 from typing import Optional
 import wave
 from io import BytesIO
@@ -49,14 +48,14 @@ class RecordThread(threading.Thread):
     def run(self):
         self.logger.info("Run.")
 
-        led.req(LedPattern.AudioRecording)
-
         self.logger.info("Start recording.")
         while True:
+            self.logger.debug(0)
             if self.stop_req:
                 self.logger.info("Stop recording.")
                 break
             else:
+                self.logger.debug(1)
                 self.wf.writeframes(
                     self.stream.read(CHUNK, exception_on_overflow=False)
                 )
