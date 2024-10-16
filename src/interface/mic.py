@@ -69,6 +69,7 @@ class RecordThread(threading.Thread):
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
         for index in range(py_audio.get_device_count()):
+            self.logger.debug(py_audio.get_device_info_by_index(index)["name"])
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]
             ):
