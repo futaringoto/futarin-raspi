@@ -1,19 +1,20 @@
 from pyaudio import PyAudio
 import threading
-import wave
 from io import BytesIO
 from typing import BinaryIO, Optional
-from pydub import AudioSegment
 import src.config.config as config
 from src.log.log import log
 from enum import Enum, auto
 from os import PathLike
 from typing import Dict
+import sounddevice as sd
 
 
 DELTA_VOLUME = config.get("delta_volume")
 RATE = 44100
 CHUNK = 1024 * 4
+
+FS = 48000
 
 
 class LocalVox(Enum):
@@ -58,39 +59,50 @@ class PlayThread(threading.Thread):
 
     def run(self):
         self.logger.info("Run")
-        self.logger.info("Convert framerate and volume.")
-        with wave.open(self.file, "rb") as wf:
-            audio = AudioSegment.from_raw(
-                self.file,
-                sample_width=wf.getsampwidth(),
-                frame_rate=wf.getframerate(),
-                channels=wf.getnchannels(),
-            )
-            audio = audio.set_frame_rate(RATE) + DELTA_VOLUME
-            processed_file = BytesIO()
-            processed_file = audio.export(processed_file, format="wav")
+        self.file().seek(0)  # バッファの先頭に戻す
+        with sf.SoundFile(audio_buffer) as file:
+            # サンプルレートとチャンネル数を取得
+            sample_rate = file.samplerate
+            channels = file.channels
 
-        with wave.open(processed_file, "rb") as wf:
-            p = PyAudio()
-            stream = p.open(
-                format=p.get_format_from_width(wf.getsampwidth()),
-                channels=wf.getnchannels(),
-                rate=wf.getframerate(),
-                output=True,
-                output_device_index=self.get_device_index(p),
-            )
+            # 音声データを読み込んで再生
+            audio_data = file.read(dtype="float32")
+            sd.play(audio_data, samplerate=sample_rate, channels=channels)
+            sd.wait()  # 再生が終わるまで待機
 
-            self.logger.info("Start playing sound.")
-
-            while len(data := wf.readframes(CHUNK)):
-                if not self.stop_req:
-                    stream.write(data)
-                else:
-                    self.logger.info("Stop playing sound.")
-                    break
-            stream.close()
-            p.terminate()
-            self.logger.info("Finish playing sound.")
+        # self.logger.info("Convert framerate and volume.")
+        # with wave.open(self.file, "rb") as wf:
+        #     audio = AudioSegment.from_raw(
+        #         self.file,
+        #         sample_width=wf.getsampwidth(),
+        #         frame_rate=wf.getframerate(),
+        #         channels=wf.getnchannels(),
+        #     )
+        #     audio = audio.set_frame_rate(RATE) + DELTA_VOLUME
+        #     processed_file = BytesIO()
+        #     processed_file = audio.export(processed_file, format="wav")
+        #
+        # with wave.open(processed_file, "rb") as wf:
+        #     p = PyAudio()
+        #     stream = p.open(
+        #         format=p.get_format_from_width(wf.getsampwidth()),
+        #         channels=wf.getnchannels(),
+        #         rate=wf.getframerate(),
+        #         output=True,
+        #         output_device_index=self.get_device_index(p),
+        #     )
+        #
+        #     self.logger.info("Start playing sound.")
+        #
+        #     while len(data := wf.readframes(CHUNK)):
+        #         if not self.stop_req:
+        #             stream.write(data)
+        #         else:
+        #             self.logger.info("Stop playing sound.")
+        #             break
+        #     stream.close()
+        #     p.terminate()
+        #     self.logger.info("Finish playing sound.")
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
         for index in range(py_audio.get_device_count()):
@@ -111,6 +123,8 @@ class Speaker:
     def __init__(self):
         self.logger = log.get_logger("Speaker")
         self.device_name = config.get("speaker_name")
+        sd.default.samplerate = FS
+        sd.default.channels = 1
         self.logger.info("Initialized")
 
     def play_local_vox(self, local_vox: LocalVox) -> PlayThread:

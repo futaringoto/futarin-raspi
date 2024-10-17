@@ -12,6 +12,9 @@ dependencies = [
     "pydub>=0.25.1",
     "flask>=3.0.3",
     "websockets>=13.1",
+    "sounddevice>=0.5.1",
+    "numpy>=2.1.2",
+    "soundfile>=0.12.1",
 ]
 
 [build-system]

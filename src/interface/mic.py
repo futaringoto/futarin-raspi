@@ -1,11 +1,13 @@
-from pyaudio import PyAudio, get_sample_size, paInt16
-from src.interface.led import led, LedPattern
+from pyaudio import PyAudio, paInt16
+import time
 from typing import Optional
-import wave
-from io import BytesIO
 import threading
 import src.config.config as config
 from src.log.log import log
+import sounddevice as sd
+import numpy as np
+import io
+import soundfile as sf
 
 
 CHUNK = 1024 * 8
@@ -43,39 +45,59 @@ class RecordThread(threading.Thread):
         self.logger.info("Initialized.")
 
     def run(self):
-        self.logger.info("Run.")
-        py_audio = PyAudio()
-        buffer = BytesIO()
-        buffer.name = "record.wav"
+        sample_rate = 44100
+        print("Recording... Press Enter to stop.")
 
-        led.req(LedPattern.AudioListening)
+        # 録音開始時の時間を取得
+        audio = []
 
-        with wave.open(buffer, "wb") as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(get_sample_size(FORMAT))
-            wf.setframerate(RATE)
+        def callback(indata, frames, time, status):
+            audio.append(indata.copy())
 
-            self.logger.info("Start recording.")
-            stream = py_audio.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                input_device_index=self.get_device_index(py_audio),
-            )
-            while True:
-                if self.stop_req:
-                    self.logger.info("Stop recording.")
-                    break
-                else:
-                    wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
+        # ストリームを使って録音
+        with sd.InputStream(samplerate=sample_rate, channels=2, callback=callback):
+            while not self.stop_req:
+                time.sleep(0.1)
 
-            stream.close()
-            py_audio.terminate()
+        # 録音データを1つの配列にまとめる
+        audio = np.concatenate(audio, axis=0)
 
-        self.logger.info("Finalize record.")
-        buffer.seek(0)
-        self.buffer = buffer
+        self.audio = audio
+        self.sample_rate = sample_rate
+
+        # self.logger.info("Run.")
+        # py_audio = PyAudio()
+        # buffer = BytesIO()
+        # buffer.name = "record.wav"
+        #
+        # led.req(LedPattern.AudioListening)
+        #
+        # with wave.open(buffer, "wb") as wf:
+        #     wf.setnchannels(CHANNELS)
+        #     wf.setsampwidth(get_sample_size(FORMAT))
+        #     wf.setframerate(RATE)
+        #
+        #     self.logger.info("Start recording.")
+        #     stream = py_audio.open(
+        #         format=FORMAT,
+        #         channels=CHANNELS,
+        #         rate=RATE,
+        #         input=True,
+        #         input_device_index=self.get_device_index(py_audio),
+        #     )
+        #     while True:
+        #         if self.stop_req:
+        #             self.logger.info("Stop recording.")
+        #             break
+        #         else:
+        #             wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
+        #
+        #     stream.close()
+        #     py_audio.terminate()
+        #
+        # self.logger.info("Finalize record.")
+        # buffer.seek(0)
+        # self.buffer = buffer
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
         for index in range(py_audio.get_device_count()):
@@ -92,4 +114,12 @@ class RecordThread(threading.Thread):
         self.stop_req = True
 
     def get_recorded_file(self):
-        return self.buffer
+        audio_buffer = io.BytesIO()
+
+        # 録音データを WAV 形式で BytesIO に保存
+        sf.write(audio_buffer, self.audio, samplerate=self.sample_rate, format="WAV")
+
+        # バッファのポインタを先頭に戻す
+        audio_buffer.seek(0)
+
+        return audio_buffer
