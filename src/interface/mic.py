@@ -1,5 +1,4 @@
 from pyaudio import PyAudio, get_sample_size, paInt16
-from src.interface.led import led, LedPattern
 from typing import Optional
 import wave
 from io import BytesIO
@@ -23,51 +22,59 @@ class RecordThread(threading.Thread):
     ):
         super().__init__(name=name, daemon=True)
         self.device_name = device_name
+        self.py_audio = PyAudio()
         self.logger = logger
         self.stop_req = False
         self.logger.info("Initialized.")
 
     def run(self):
         self.logger.info("Run.")
-        py_audio = PyAudio()
-        buffer = BytesIO()
-        buffer.name = "record.wav"
 
-        led.req(LedPattern.AudioRecording)
+        self.buffer = BytesIO()
+        self.buffer.name = "record.wav"
 
-        with wave.open(buffer, "wb") as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(get_sample_size(FORMAT))
-            wf.setframerate(RATE)
+        self.mic_index = self.get_device_index(self.py_audio)
 
-            self.logger.info("Start recording.")
-            stream = py_audio.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                input_device_index=self.get_device_index(py_audio),
-            )
-            while True:
-                if self.stop_req:
-                    self.logger.info("Stop recording.")
-                    break
-                else:
-                    wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
+        self.wf = wave.open(self.buffer, "wb")
+        self.wf.setnchannels(CHANNELS)
+        self.wf.setsampwidth(get_sample_size(FORMAT))
+        self.wf.setframerate(RATE)
 
-            stream.close()
-            py_audio.terminate()
+        self.stream = self.py_audio.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            input=True,
+            input_device_index=self.mic_index,
+        )
+        self.logger.info("Start recording.")
+        while True:
+            self.logger.debug(0)
+            if self.stop_req:
+                self.logger.info("Stop recording.")
+                break
+            else:
+                self.logger.debug(1)
+                self.wf.writeframes(
+                    self.stream.read(CHUNK, exception_on_overflow=False)
+                )
+
+        self.stream.close()
+        self.py_audio.terminate()
 
         self.logger.info("Finalize record.")
-        buffer.seek(0)
-        self.buffer = buffer
+        self.wf.close()
+        self.stream.close()
+        self.buffer.seek(0)
+        self.buffer = self.buffer
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
         for index in range(py_audio.get_device_count()):
+            self.logger.debug(py_audio.get_device_info_by_index(index)["name"])
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]
             ):
-                self.logger.info(f"Found speaker. ({index=})")
+                self.logger.info(f"Found mic. ({index=})")
                 return index
         self.logger.error("Not found mic.")
         return None
@@ -86,9 +93,10 @@ class Mic:
         self.device_name = config.get("mic_name")
         self.logger.info("Initialized.")
 
-    def record(self) -> RecordThread:
+    def record(self, auto_start=True) -> RecordThread:
         thread = RecordThread(self.device_name)
-        thread.start()
+        if auto_start:
+            thread.start()
         return thread
 
 

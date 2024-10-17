@@ -13,7 +13,7 @@ from typing import Dict
 
 DELTA_VOLUME = config.get("delta_volume")
 RATE = 44100
-CHUNK = 1024 * 4
+CHUNK = 1024 * 1
 
 
 class LocalVox(Enum):
@@ -31,7 +31,7 @@ class LocalVox(Enum):
 local_vox_paths: Dict[LocalVox, str | PathLike] = {
     LocalVox.Welcome: "assets/vox/welcome.wav",
     LocalVox.Shutdown: "assets/vox/shutdown.wav",  # TODO
-    LocalVox.WhatUp: "assets/vox/whatup.wav",
+    LocalVox.WhatUp: "assets/vox/whatup_trim.wav",
     LocalVox.KeepPressing: "assets/vox/fail.wav",  # TODO
     LocalVox.Fail: "assets/vox/fail.wav",
     LocalVox.MessagesMode: "assets/vox/message_mode.wav",
@@ -77,22 +77,33 @@ class PlayThread(threading.Thread):
                 channels=wf.getnchannels(),
                 rate=wf.getframerate(),
                 output=True,
+                input=False,
                 output_device_index=self.get_device_index(p),
             )
 
             self.logger.info("Start playing sound.")
 
+            self.logger.debug("A")
             while len(data := wf.readframes(CHUNK)):
+                self.logger.debug("B")
                 if not self.stop_req:
+                    self.logger.debug("C")
                     stream.write(data)
+                    self.logger.debug("D")
                 else:
                     self.logger.info("Stop playing sound.")
                     break
+
+            self.logger.info("G")
             stream.close()
+            self.logger.info("H")
             p.terminate()
+            self.logger.info("I")
             self.logger.info("Finish playing sound.")
 
     def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
+        for index in range(py_audio.get_device_count()):
+            self.logger.debug(f"{index=}, {py_audio.get_device_info_by_index(index)}")
         for index in range(py_audio.get_device_count()):
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]

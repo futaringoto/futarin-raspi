@@ -7,7 +7,7 @@ from enum import Enum, auto
 
 MAIN_BUTTON_PIN = config.get("main_button_pin")
 SUB_BUTTON_PIN = config.get("sub_button_pin")
-SENSOR_INTERVAL = 0.1
+SENSOR_INTERVAL = 0.05
 MAIN_HOLD_TIME = 1
 SUB_HOLD_TIME = 10
 
