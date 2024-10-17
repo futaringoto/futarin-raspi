@@ -137,16 +137,17 @@ class Main:
     async def normal(self):
         self.logger.info("Start message mode")
         what_up_thread = speaker.play_local_vox(LocalVox.WhatUp)
-        record_thread = recoard_thread = mic.record(auto_start=False)
+        record_thread = mic.record(auto_start=False)
 
         what_up_thread.join()
         record_thread.start()
+        led.req(LedPattern.AudioPlaying)
         await button.wait_for_release_main()
         record_thread.stop()
         record_thread.join()
 
         self.logger.info("Check recorded file.")
-        file = recoard_thread.get_recorded_file()
+        file = record_thread.get_recorded_file()
         audio_seconds = self.get_audio_seconds(file)
         if audio_seconds is None or audio_seconds < 1:
             self.logger.info("Inviled recorded file.")

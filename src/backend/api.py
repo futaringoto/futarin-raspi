@@ -62,7 +62,7 @@ class Api:
     async def get(self, endpoint: str) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
         for _ in range(RETRIES):
-            self.logger.info(f"Send GET HTTP Req. ({url=})")
+            self.logger.info(f"Send POST HTTP Req. ({url=})")
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url, timeout=TIMEOUT)
