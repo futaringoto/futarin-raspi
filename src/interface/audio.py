@@ -83,7 +83,7 @@ class PlayThread(threading.Thread):
 
         with wave.open(processed_file, "rb") as wf:
             stream = self.py_audio.open(
-                format=p.get_format_from_width(wf.getsampwidth()),
+                format=self.py_audio.get_format_from_width(wf.getsampwidth()),
                 channels=wf.getnchannels(),
                 rate=wf.getframerate(),
                 output=True,
@@ -99,13 +99,12 @@ class PlayThread(threading.Thread):
                     self.logger.info("Stop playing sound.")
                     break
             stream.close()
-            p.terminate()
             self.logger.info("Finish playing sound.")
 
-    def get_device_index(self -> Optional[int]:
+    def get_device_index(self) -> Optional[int]:
         for index in range(self.py_audio.get_device_count()):
             if self.device_name in str(
-                py_audio.get_device_info_by_index(index)["name"]
+                self.py_audio.get_device_info_by_index(index)["name"]
             ):
                 self.logger.info(f"Found speaker. ({index=})")
                 return index
@@ -121,11 +120,13 @@ class RecordThread(threading.Thread):
     def __init__(
         self,
         device_name,
+        py_audio: PyAudio,
         logger=log.get_logger("MicRecordThread"),
         name="Mic-Record",
     ):
         super().__init__(name=name, daemon=True)
         self.device_name = device_name
+        self.py_audio = py_audio
         self.logger = logger
         self.stop_req = False
         self.logger.info("Initialized.")
@@ -143,12 +144,12 @@ class RecordThread(threading.Thread):
             wf.setframerate(RATE)
 
             self.logger.info("Start recording.")
-            stream = py_audio.open(
+            stream = self.py_audio.open(
                 format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
-                input_device_index=self.get_device_index(py_audio),
+                input_device_index=self.get_device_index(),
             )
             while True:
                 if self.stop_req:
@@ -158,7 +159,6 @@ class RecordThread(threading.Thread):
                     wf.writeframes(stream.read(CHUNK, exception_on_overflow=False))
 
             stream.close()
-            py_audio.terminate()
 
         self.logger.info("Finalize record.")
         buffer.seek(0)
@@ -167,7 +167,7 @@ class RecordThread(threading.Thread):
     def get_device_index(self) -> Optional[int]:
         for index in range(self.py_audio.get_device_count()):
             if self.device_name in str(
-                py_audio.get_device_info_by_index(index)["name"]
+                self.py_audio.get_device_info_by_index(index)["name"]
             ):
                 self.logger.info(f"Found speaker. ({index=})")
                 return index
@@ -203,12 +203,12 @@ class Audio:
 
     def play(self, file: BinaryIO) -> PlayThread:
         self.logger.info("Play sound.")
-        thread = PlayThread(file, self.device_name)
+        thread = PlayThread(file, self.device_name, self.py_audio)
         thread.start()
         return thread
 
     def record(self) -> RecordThread:
-        thread = RecordThread(self.device_name)
+        thread = RecordThread(self.device_name, self.py_audio)
         thread.start()
         return thread
 
