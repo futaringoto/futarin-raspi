@@ -92,6 +92,7 @@ dependencies = [
     { name = "pyaudio" },
     { name = "pydub" },
     { name = "rpi-lgpio" },
+    { name = "simpleaudio" },
     { name = "websockets" },
 ]
 
@@ -103,6 +104,7 @@ requires-dist = [
     { name = "pyaudio", specifier = ">=0.2.14" },
     { name = "pydub", specifier = ">=0.25.1" },
     { name = "rpi-lgpio", specifier = ">=0.6" },
+    { name = "simpleaudio", specifier = ">=1.0.4" },
     { name = "websockets", specifier = ">=13.1" },
 ]
 
@@ -254,6 +256,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/6a/21/8fd457d5a97910960
 wheels = [
     { url = "https://files.pythonhosted.org/packages/df/b5/168cec9a10bf93b60b8f9af7f4e61d526e31e1aad8b9be0e30837746d700/setuptools-74.0.0-py3-none-any.whl", hash = "sha256:0274581a0037b638b9fc1c6883cc71c0210865aaa76073f7882376b641b84e8f", size = 1301729 },
 ]
+
+[[package]]
+name = "simpleaudio"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/1b/4dc29653733202b68c09d9c6ca085cf67ac54859ee860647ef21ac1ff3dc/simpleaudio-1.0.4.tar.gz", hash = "sha256:691c88649243544db717e7edf6a9831df112104e1aefb5f6038a5d071e8cf41d", size = 2042564 }
 
 [[package]]
 name = "sniffio"

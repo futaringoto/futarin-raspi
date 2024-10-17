@@ -50,7 +50,7 @@ class PlayThread(threading.Thread):
         name="Speaker-Play",
     ):
         super().__init__(name=name)
-        self.file = file
+        self.bytes = (file.read(),)
         self.device_name = device_name
         self.logger = logger
         self.stop_req = False
