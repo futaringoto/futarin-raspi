@@ -182,7 +182,7 @@ class RecordThread(threading.Thread):
         return self.buffer
 
 
-class Speaker:
+class Audio:
     def __init__(self):
         self.logger = log.get_logger("Speaker")
         self.device_name = config.get("speaker_name")
@@ -212,4 +212,4 @@ class Speaker:
         return thread
 
 
-speaker = Speaker()
+audio = Audio()
