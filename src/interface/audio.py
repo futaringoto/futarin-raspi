@@ -55,11 +55,13 @@ class PlayThread(threading.Thread):
         self,
         file: BinaryIO,
         device_name,
+        py_audio: PyAudio,
         logger=log.get_logger("SpeakerPlayThread"),
         name="Speaker-Play",
     ):
         super().__init__(name=name, daemon=True)
         self.file = file
+        self.py_audio = py_audio
         self.device_name = device_name
         self.logger = logger
         self.stop_req = False
@@ -80,13 +82,12 @@ class PlayThread(threading.Thread):
             processed_file = audio.export(processed_file, format="wav")
 
         with wave.open(processed_file, "rb") as wf:
-            p = PyAudio()
-            stream = p.open(
+            stream = self.py_audio.open(
                 format=p.get_format_from_width(wf.getsampwidth()),
                 channels=wf.getnchannels(),
                 rate=wf.getframerate(),
                 output=True,
-                output_device_index=self.get_device_index(p),
+                output_device_index=self.get_device_index(),
             )
 
             self.logger.info("Start playing sound.")
@@ -101,8 +102,8 @@ class PlayThread(threading.Thread):
             p.terminate()
             self.logger.info("Finish playing sound.")
 
-    def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
-        for index in range(py_audio.get_device_count()):
+    def get_device_index(self -> Optional[int]:
+        for index in range(self.py_audio.get_device_count()):
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]
             ):
@@ -131,7 +132,6 @@ class RecordThread(threading.Thread):
 
     def run(self):
         self.logger.info("Run.")
-        py_audio = PyAudio()
         buffer = BytesIO()
         buffer.name = "record.wav"
 
@@ -164,8 +164,8 @@ class RecordThread(threading.Thread):
         buffer.seek(0)
         self.buffer = buffer
 
-    def get_device_index(self, py_audio: PyAudio = PyAudio()) -> Optional[int]:
-        for index in range(py_audio.get_device_count()):
+    def get_device_index(self) -> Optional[int]:
+        for index in range(self.py_audio.get_device_count()):
             if self.device_name in str(
                 py_audio.get_device_info_by_index(index)["name"]
             ):
@@ -187,6 +187,7 @@ class Audio:
         self.logger = log.get_logger("Speaker")
         self.device_name = config.get("speaker_name")
         self.device_name = config.get("mic_name")
+        self.py_audio = PyAudio()
         self.logger.info("Initialized")
 
     def play_local_vox(self, local_vox: LocalVox) -> PlayThread:
