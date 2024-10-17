@@ -59,7 +59,7 @@ class PlayThread(threading.Thread):
 
     def run(self):
         self.logger.info("Run")
-        self.file().seek(0)  # バッファの先頭に戻す
+        self.file()  # バッファの先頭に戻す
         with sf.SoundFile(audio_buffer) as file:
             # サンプルレートとチャンネル数を取得
             sample_rate = file.samplerate
