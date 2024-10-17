@@ -62,7 +62,7 @@ class RecordThread(threading.Thread):
         # 録音データを1つの配列にまとめる
         audio = np.concatenate(audio, axis=0)
 
-        self.audio = audio
+            self.audio = audio
         self.sample_rate = sample_rate
 
         # self.logger.info("Run.")
@@ -78,7 +78,8 @@ class RecordThread(threading.Thread):
         #     wf.setframerate(RATE)
         #
         #     self.logger.info("Start recording.")
-        #     stream = py_audio.open(
+     
+        # stream = py_audio.open(
         #         format=FORMAT,
         #         channels=CHANNELS,
         #         rate=RATE,

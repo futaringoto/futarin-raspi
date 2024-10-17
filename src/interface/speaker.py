@@ -92,7 +92,7 @@ class PlayThread(threading.Thread):
         #         output_device_index=self.get_device_index(p),
         #     )
         #
-        #     self.logger.info("Start playing sound.")
+        #   elf.logger.info("Start playing sound.")
         #
         #     while len(data := wf.readframes(CHUNK)):
         #         if not self.stop_req:
