@@ -13,7 +13,7 @@ from typing import Dict
 
 DELTA_VOLUME = config.get("delta_volume")
 RATE = 44100
-CHUNK = 1024 * 4
+CHUNK = 1024 * 1
 
 
 class LocalVox(Enum):
