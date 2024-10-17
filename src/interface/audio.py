@@ -16,10 +16,10 @@ from src.interface.led import led, LedPattern
 # form speaker
 DELTA_VOLUME = config.get("delta_volume")
 RATE = 44100
-CHUNK = 1024 * 4
+CHUNK = 1024 * 2
 
 # from mic
-CHUNK = 1024 * 8
+CHUNK = 1024 * 2
 FORMAT = paInt16
 CHANNELS = 2
 RATE = 44100
