@@ -62,7 +62,7 @@ class Api:
     async def get(self, endpoint: str) -> Optional[Response]:
         url = f"{ORIGIN}{endpoint}"
         for _ in range(RETRIES):
-            self.logger.info(f"Send POST HTTP Req. ({url=})")
+            self.logger.info(f"Send GET HTTP Req. ({url=})")
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url, timeout=TIMEOUT)
@@ -90,7 +90,7 @@ class Api:
             files = None
 
         for _ in range(RETRIES):
-            self.logger.info(f"Send POST HTTP Req. ({url=})")
+            self.logger.info(f"Send GET HTTP Req. ({url=})")
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.post(url, files=files, timeout=TIMEOUT)
@@ -105,7 +105,7 @@ class Api:
                         )
                         continue
             except httpx.HTTPError:
-                self.logger.warn("HTTP error. ({exc}) Will be retry.")
+                self.logger.warn("HTTP error. Will be retry.")
                 continue
         self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
         return None
@@ -161,7 +161,7 @@ class Api:
         response = await self.get(endpoint)
         if response is not None:
             self.message_file = response.file
-            self.logger.info("Success to get message.")
+            self.logger.error("Success to get message.")
             return True
         else:
             self.logger.error("Fail to get message.")
@@ -193,13 +193,13 @@ class Api:
                 self.logger.error("Key('url') not found")
                 continue
 
-    async def wait_for_notifing(self):
+    async def wait_for_notification(self):
         self.logger.debug("Wait for notification.")
         while not self.notified:
             await asyncio.sleep(SENSOR_INTERVAL)
         await self.req_get_message()
 
-    async def start_websocket_connection(self):
+    async def start_listening_notifications(self):
         self.logger.info("Establish a WebSocket connection.")
         await self.init_notification_connection()
         self.ws_task = asyncio.create_task(self.run_websockets())
