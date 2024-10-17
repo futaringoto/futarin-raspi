@@ -90,7 +90,7 @@ class Api:
             files = None
 
         for _ in range(RETRIES):
-            self.logger.info(f"Send GET HTTP Req. ({url=})")
+            self.logger.info(f"Send POST HTTP Req. ({url=})")
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.post(url, files=files, timeout=TIMEOUT)
@@ -105,7 +105,7 @@ class Api:
                         )
                         continue
             except httpx.HTTPError:
-                self.logger.warn("HTTP error. Will be retry.")
+                self.logger.warn("HTTP error. ({exc}) Will be retry.")
                 continue
         self.logger.error(f"HTTP error {RETRIES} times. Finish trying to connect.")
         return None
