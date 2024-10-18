@@ -67,6 +67,7 @@ class Main:
 
                 if message_file:
                     self.logger.error("Success to get message_file.")
+                    led.req(LedPattern.Notifing)
                     await button.wait_for_press_main()
 
                     playing_receive_message_thread = speaker.play_local_vox(
@@ -148,6 +149,7 @@ class Main:
 
         self.logger.info("Record voice.")
         recoard_thread = mic.record()
+        led.req(LedPattern.AudioRecording)
         await button.wait_for_release_main()
         recoard_thread.stop()
         recoard_thread.join()
@@ -168,6 +170,7 @@ class Main:
             speaker_thread.join()
         else:
             speaker_thread = speaker.play(received_file)
+            led.req(LedPattern.AudioPlaying)
             speaker_thread.join()
 
     def get_audio_seconds(self, audio_file) -> Optional[int]:

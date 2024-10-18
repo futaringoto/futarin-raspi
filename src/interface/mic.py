@@ -1,5 +1,4 @@
 from pyaudio import PyAudio, get_sample_size, paInt16
-from src.interface.led import led, LedPattern
 from typing import Optional
 import wave
 from io import BytesIO
@@ -32,8 +31,6 @@ class RecordThread(threading.Thread):
         py_audio = PyAudio()
         buffer = BytesIO()
         buffer.name = "record.wav"
-
-        led.req(LedPattern.AudioRecording)
 
         with wave.open(buffer, "wb") as wf:
             wf.setnchannels(CHANNELS)
