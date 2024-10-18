@@ -50,7 +50,7 @@ class Main:
             self.logger.info("Wait for button to press or notifing.")
             done_task_index = await self.wait_multi_tasks(
                 ct(api.wait_for_notification()),
-                ct(button.wait_for_hold_main()),
+                ct(button.wait_for_press_main()),
                 ct(button.wait_for_press_sub()),
             )
 
