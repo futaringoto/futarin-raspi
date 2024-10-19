@@ -24,6 +24,7 @@ class Mode(Enum):
 class Main:
     def __init__(self):
         self.mode = Mode.Normal
+        self.last_converted_file = None
         self.logger = log.get_logger("Main")
         self.logger.info("Initialized")
 
