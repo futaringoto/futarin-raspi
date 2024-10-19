@@ -19,6 +19,7 @@ ct = asyncio.create_task
 class Mode(Enum):
     Normal = auto()
     Message = auto()
+    Voice = auto()
 
 
 class Main:
@@ -90,9 +91,12 @@ class Main:
                     if self.mode == Mode.Normal:
                         self.logger.debug("Call normal mode.")
                         await self.normal()
-                    else:
+                    elif self.mode == Mode.Message:
                         self.logger.debug("Call message mode.")
                         await self.message()
+                    elif self.mode == Mode.Voice:
+                        self.logger.debug("Call voice mode.")
+                        await self.voice()
 
                 # if sub button pressed
                 else:
@@ -100,14 +104,38 @@ class Main:
                     done_task_index = await self.wait_multi_tasks(
                         ct(button.wait_for_release_sub()),
                         ct(button.wait_for_hold_sub()),
+                        ct(button.wait_for_press_main()),
                     )
                     if done_task_index == 0:
                         self.logger.info("Released sub button during waiting holding.")
                         await self.toggle_mode()
-                    else:
+                    elif done_task_index == 1:
                         self.logger.info("Holded sub button.")
                         self.logger.debug("Exit main_loop.")
                         return
+                    else:
+                        await self.change_to_voice_mode()
+
+    async def voice(self):
+        self.logger.info("Start message mode")
+        what_up_thread = speaker.play_local_vox(LocalVox.WhatUp)
+        what_up_thread.join()
+
+        self.logger.info("Record voice to send.")
+        recoard_thread = mic.record()
+        await button.wait_for_release_main()
+        recoard_thread.stop()
+        recoard_thread.join()
+        file = recoard_thread.get_recorded_file()
+        if await api.post_message(file):
+            speaker.play_local_vox(LocalVox.SendMessage).join()
+        else:
+            speaker.play_local_vox(LocalVox.Fail).join()
+
+    async def change_to_voice_mode(self):
+        self.logger.info("Change to voice mode")
+        self.mode = Mode.Voice
+        speaker.play_local_vox(LocalVox.VoiceMode)
 
     async def toggle_mode(self):
         self.logger.info("Toggle mode.")
