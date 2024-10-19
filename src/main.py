@@ -75,9 +75,10 @@ class Main:
                     await button.wait_for_press_main()
 
                     speaker.play_local_vox(LocalVox.ReceiveMessage).join()
-
                     led.req(LedPattern.AudioPlaying)
                     speaker.play(response_file).join()
+
+                    self.mode = Mode.Normal
 
             # if button pressed
             else:
@@ -135,7 +136,7 @@ class Main:
     async def change_to_voice_mode(self):
         self.logger.info("Change to voice mode")
         self.mode = Mode.Voice
-        speaker.play_local_vox(LocalVox.VoiceMode)
+        speaker.play_local_vox(LocalVox.Voice)
 
     async def toggle_mode(self):
         self.logger.info("Toggle mode.")
@@ -172,12 +173,15 @@ class Main:
             self.logger.info("Recorded file is short.")
             if self.last_converted_file is not None:
                 self.logger.info("Post converted file.")
+                led.req(LedPattern.ApiPostingMessage)
                 is_succses = await api.post_message(self.last_converted_file)
                 if is_succses:
                     led.req(LedPattern.ApiSuccess)
                     speaker.play_local_vox(LocalVox.SendMessage).join()
                 else:
                     await self.fail()
+            else:
+                await self.fail()
 
         else:
             self.logger.info("Convert recorded message.")
@@ -209,11 +213,13 @@ class Main:
         self.logger.info("Check recorded file.")
         file = recoard_thread.get_recorded_file()
         audio_seconds = self.get_audio_seconds(file)
-        if audio_seconds is None or audio_seconds < 1:
+        if audio_seconds is None:
             self.logger.info("Inviled recorded file.")
-            speaker_thread = speaker.play_local_vox(LocalVox.Fail)
-            speaker_thread.join()
+            speaker.play_local_vox(LocalVox.Fail).join()
             return
+        elif audio_seconds < 1:
+            self.logger.warn("Recorded audio is too short.")
+            speaker.play_local_vox(LocalVox.WhatUpWithGuidance)
 
         self.logger.info("Call api.normal")
         received_file = await api.normal(file)
