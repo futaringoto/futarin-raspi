@@ -24,12 +24,14 @@ class Endpoint(Enum):
     Ping = auto()
     Normal = auto()
     Messages = auto()
+    Conversion = auto
 
 
 endpoints = {
     Endpoint.WsNegotiate: f"/v{VERSION}/raspis/{ID}/negotiate",
     Endpoint.Ping: "/ping",
     Endpoint.Normal: f"/v{VERSION}/raspis/{ID}",
+    Endpoint.Conversion: f"/v{VERSION}/raspis/{ID}?mode=1",
     Endpoint.Messages: f"/v{VERSION}/raspis/{ID}/messages",
 }
 
@@ -138,23 +140,28 @@ class Api:
             response_file = response.file
             led.req(LedPattern.ApiSuccess)
             return response_file
+
+    async def post_message(self, audio_file) -> bool:
+        self.logger.info("Post message.")
+        endpoint = endpoints[Endpoint.Messages]
+        response = await self.post(endpoint, audio_file=audio_file)
+
+        if response is None:
+            return False
+        else:
+            return True
+
+    async def conversion(self, audio_file) -> Optional[BytesIO]:
+        led.req(LedPattern.ApiProcessing)
+        endpoint = endpoints[Endpoint.Conversion]
+        response = await self.post(endpoint, audio_file=audio_file)
+        if response is not None:
+            response_file = response.file
+            led.req(LedPattern.ApiSuccess)
+            return response_file
         else:
             led.req(LedPattern.ApiFail)
             return None
-
-    async def messages(self, audio_file) -> bool:
-        self.logger.info("Start Api.messages()")
-        led.req(LedPattern.ApiPostingMessage)
-        endpoint = endpoints[Endpoint.Messages]
-        response = await self.post(endpoint, audio_file=audio_file)
-        if response is None:
-            self.logger.info("Post message fail.")
-            led.req(LedPattern.ApiFail)
-            return False
-        else:
-            self.logger.info("Post message success.")
-            led.req(LedPattern.ApiSuccess)
-            return True
 
     async def req_get_message(self) -> bool:
         endpoint = f"{endpoints[Endpoint.Messages]}/{self.message_id}"

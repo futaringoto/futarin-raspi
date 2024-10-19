@@ -36,7 +36,6 @@ class Main:
     async def setup(self):
         led.req(LedPattern.SystemSetup)
         await api.wait_for_connect()
-
         await api.start_listening_notifications()
 
     async def main_loop(self):
@@ -45,6 +44,7 @@ class Main:
 
         while True:
             self.logger.info("Start loop.")
+            # reset led
             led.req(LedPattern.WifiHigh)
 
             self.logger.info("Wait for button to press or notifing.")
@@ -63,30 +63,25 @@ class Main:
             # if notified
             if done_task_index == 0:
                 self.logger.debug("Notified.")
-                message_file = await api.get_message()
+                response_file = await api.get_message()
 
-                if message_file:
+                if response_file is None:
+                    self.logger.error("Failed to get message_file")
+                else:
                     self.logger.error("Success to get message_file.")
                     led.req(LedPattern.Notifing)
                     await button.wait_for_press_main()
 
-                    playing_receive_message_thread = speaker.play_local_vox(
-                        LocalVox.ReceiveMessage
-                    )
-                    playing_receive_message_thread.join()
+                    speaker.play_local_vox(LocalVox.ReceiveMessage).join()
 
                     led.req(LedPattern.AudioPlaying)
-                    speaker.play(message_file).join()
-
-                else:
-                    self.logger.error("Failed to get message_file.")
+                    speaker.play(response_file).join()
 
             # if button pressed
             else:
                 pressed_button = (
                     ButtonEnum.Main if done_task_index == 1 else ButtonEnum.Sub
                 )
-
                 self.logger.info(f"{pressed_button} was pressed.")
 
                 # if main button pressed
@@ -97,16 +92,19 @@ class Main:
                     else:
                         self.logger.debug("Call message mode.")
                         await self.message()
+
                 # if sub button pressed
                 else:
-                    # observer sub button
+                    # observe sub button
                     done_task_index = await self.wait_multi_tasks(
                         ct(button.wait_for_release_sub()),
                         ct(button.wait_for_hold_sub()),
                     )
                     if done_task_index == 0:
+                        self.logger.info("Released sub button during waiting holding.")
                         await self.toggle_mode()
                     else:
+                        self.logger.info("Holded sub button.")
                         self.logger.debug("Exit main_loop.")
                         return
 
@@ -115,32 +113,57 @@ class Main:
         if self.mode == Mode.Normal:
             self.logger.info("Switch to message mode.")
             self.mode = Mode.Message
-            messages_mode_message_thread = speaker.play_local_vox(LocalVox.MessagesMode)
-            messages_mode_message_thread.join()
+            speaker.play_local_vox(LocalVox.MessagesMode).join()
 
         else:
             self.mode = Mode.Normal
             self.logger.info("Switch to normal mode.")
-            normal_mode_message_thread = speaker.play_local_vox(LocalVox.NormalMode)
-            normal_mode_message_thread.join()
+            speaker.play_local_vox(LocalVox.NormalMode).join()
 
     async def message(self):
         self.logger.info("Start message mode")
-        what_up_thread = speaker.play_local_vox(LocalVox.WhatUp)
-        what_up_thread.join()
+        speaker.play_local_vox(LocalVox.WhatUp).join()
 
-        self.logger.info("Record message to send.")
+        self.logger.info("Record voice.")
         recoard_thread = mic.record()
+        led.req(LedPattern.AudioRecording)
         await button.wait_for_release_main()
         recoard_thread.stop()
         recoard_thread.join()
-        file = recoard_thread.get_recorded_file()
-        if await api.messages(file):
-            what_happen_thread = speaker.play_local_vox(LocalVox.SendMessage)
-            what_happen_thread.join()
+
+        self.logger.info("Check recorded file.")
+        recorded_file = recoard_thread.get_recorded_file()
+        audio_seconds = self.get_audio_seconds(recorded_file)
+        if audio_seconds is None:
+            self.logger.info("Inviled recorded file.")
+            speaker_thread = speaker.play_local_vox(LocalVox.Fail)
+            speaker_thread.join()
+            return
+        elif audio_seconds < 1:
+            self.logger.info("Recorded file is short.")
+            if self.last_converted_file is not None:
+                self.logger.info("Post converted file.")
+                is_succses = await api.post_message(self.last_converted_file)
+                if is_succses:
+                    led.req(LedPattern.ApiSuccess)
+                    speaker.play_local_vox(LocalVox.SendMessage).join()
+                else:
+                    await self.fail()
+
         else:
-            what_happen_thread = speaker.play_local_vox(LocalVox.Fail)
-            what_happen_thread.join()
+            self.logger.info("Convert recorded message.")
+            response_file = api.conversion(recorded_file)
+            if response_file is None:
+                await self.fail()
+            else:
+                led.req(LedPattern.ApiSuccess)
+                self.last_converted_file = response_file
+                speaker.play(response_file).join()
+
+    async def fail(self):
+        led.req(LedPattern.ApiFail)
+        speaker_thread = speaker.play_local_vox(LocalVox.Fail)
+        speaker_thread.join()
 
     async def normal(self):
         self.logger.info("Start message mode")
