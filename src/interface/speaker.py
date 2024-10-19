@@ -26,6 +26,7 @@ class LocalVox(Enum):
     SendMessage = auto()
     ReceiveMessage = auto()
     Fail = auto()
+    WhatUpWithGuidance = auto()
 
 
 local_vox_paths: Dict[LocalVox, str | PathLike] = {
@@ -38,6 +39,7 @@ local_vox_paths: Dict[LocalVox, str | PathLike] = {
     LocalVox.NormalMode: "assets/vox/normal.wav",
     LocalVox.SendMessage: "assets/vox/send_message.wav",
     LocalVox.ReceiveMessage: "assets/vox/receive_message.wav",
+    LocalVox.WhatUpWithGuidance: "assets/vox/what_up_with_guidance.wav",
 }
 
 
