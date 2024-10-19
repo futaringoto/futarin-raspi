@@ -153,7 +153,7 @@ class Main:
 
         else:
             self.logger.info("Convert recorded message.")
-            response_file = api.conversion(recorded_file)
+            response_file = await api.conversion(recorded_file)
             if response_file is None:
                 await self.fail()
             else:
